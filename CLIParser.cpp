@@ -1,5 +1,8 @@
 #include <cstring>
 #include "CLIParser.hpp"
+#ifdef UCLI_COMPILE_WITH_UTF_SUPPORT
+    #include "utf8cpp/utf8.h"
+#endif
 
 void UCLI::Parser::parse(int argc, char** argv,
                          UCLI_Parser_ArrayFlag* arrayFlags, size_t arrayFlagsSize,
@@ -9,6 +12,10 @@ void UCLI::Parser::parse(int argc, char** argv,
                          UCLI_Parser_PairWithFunc* pairsWithFunc, size_t pairsWithFuncSize) noexcept
 {
     std::string tmp;
+
+    std::u32string singleCharU32;
+    singleCharU32.resize(1);
+
     std::string singleChar;
     singleChar.resize(1);
 
@@ -37,7 +44,7 @@ void UCLI::Parser::parse(int argc, char** argv,
                                       pairs, pairsSize,
                                       pairsWithFunc, pairsWithFuncSize, true);
                 else
-                    parseShortArgument(currentArray, singleChar, tmp, arrayFlags, arrayFlagsSize, booleanFlags, booleanFlagsSize, booleanFlagsWithFunc, booleanFlagsWithFuncSize);
+                    parseShortArgument(currentArray, singleChar, singleCharU32, tmp, arrayFlags, arrayFlagsSize, booleanFlags, booleanFlagsSize, booleanFlagsWithFunc, booleanFlagsWithFuncSize);
             }
         }
         else
@@ -89,11 +96,64 @@ UCLI::Parser::Parser() noexcept
     init();
 }
 
-void UCLI::Parser::parseShortArgument(std::vector<char*>& args, std::string& singleChar, const std::string& tmp,
+void UCLI::Parser::parseShortArgument(std::vector<char*>& args, std::string& singleChar, std::u32string& singleCharU32, const std::string& tmp,
                                       UCLI_Parser_ArrayFlag* arrayFlags, size_t arrayFlagsSize,
                                       UCLI_Parser_BooleanFlag* booleanFlags, size_t booleanFlagsSize,
                                       UCLI_Parser_BooleanFlagWithFunc* booleanFlagsWithFunc, size_t booleanFlagsWithFuncSize) noexcept
 {
+#ifdef UCLI_COMPILE_WITH_UTF_SUPPORT
+    utf8::iterator begin(tmp.begin() + 1, tmp.begin() + 1, tmp.end());
+    utf8::iterator end(tmp.end(), tmp.begin() + 1, tmp.end());
+
+    for (auto f = begin; f != end; ++f)
+    {
+        singleCharU32[0] = *f;
+
+        if (booleanFlags != nullptr)
+        {
+            for (size_t t = 0; t < booleanFlagsSize; t++)
+            {
+                auto& a = booleanFlags[t];
+                if (a.shortType == utf8::utf32to8(singleCharU32))
+                {
+                    if (data.bFlipBool)
+                        *a.flag = !*a.flag;
+                    else
+                        *a.flag = true;
+                    goto continue_from_single_flag_inner_loops;
+                }
+            }
+        }
+        if (booleanFlagsWithFunc != nullptr)
+        {
+            for (size_t t = 0; t < booleanFlagsWithFuncSize; t++)
+            {
+                auto& a = booleanFlagsWithFunc[t];
+                if (a.shortType == utf8::utf32to8(singleCharU32))
+                {
+                    a.func(&a);
+                    goto continue_from_single_flag_inner_loops;
+                }
+            }
+        }
+        if (arrayFlags != nullptr)
+        {
+            for (size_t i = 0; i < arrayFlagsSize; i++)
+            {
+                if (arrayFlags[i].shortType == utf8::utf32to8(singleCharU32))
+                {
+                    data.currentArrayFlag->func(data.currentArrayFlag, args.data(), args.size());
+                    args.clear();
+
+                    data.currentArrayFlag = &arrayFlags[i];
+                    goto continue_from_single_flag_inner_loops;
+                }
+            }
+        }
+        data.unknownArgumentsCallback(utf8::utf32to8(singleCharU32).c_str(), data.unknownArgumentsCallbackAdditionalData);
+continue_from_single_flag_inner_loops:;
+    }
+#else
     for (size_t f = 1; f < tmp.size(); f++)
     {
         singleChar[0] = tmp[f];
@@ -142,6 +202,7 @@ void UCLI::Parser::parseShortArgument(std::vector<char*>& args, std::string& sin
         data.unknownArgumentsCallback(singleChar.c_str(), data.unknownArgumentsCallbackAdditionalData);
 continue_from_single_flag_inner_loops:;
     }
+#endif
 }
 
 void UCLI::Parser::parseLongArgument(std::vector<char*>& args, uint8_t frontTruncate, std::string& tmp,

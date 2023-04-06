@@ -30,7 +30,7 @@ namespace UCLI
 
         static void cleanupPairs(UCLI_Parser_Pair* pairs, size_t pairsSize);
     private:
-        void parseShortArgument(std::vector<char*>& args, std::string& singleChar, const std::string& tmp,
+        void parseShortArgument(std::vector<char*>& args, std::string& singleChar, std::u32string& singleCharU32, const std::string& tmp,
                                 UCLI_Parser_ArrayFlag* arrayFlags, size_t arrayFlagsSize,
                                 UCLI_Parser_BooleanFlag* booleanFlags, size_t booleanFlagsSize,
                                 UCLI_Parser_BooleanFlagWithFunc* booleanFlagsWithFunc, size_t booleanFlagsWithFuncSize) noexcept;
