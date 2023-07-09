@@ -23,35 +23,35 @@
 extern "C"
 {
 #endif
-    struct UCLI_Parser_ArrayFlag;
+    typedef struct UCLI_Parser_ArrayFlag UCLI_Parser_ArrayFlag;
 
     typedef void(*UCLI_Parser_UnknownArgumentsCallback)(const char*, void*);
-    typedef void(*UCLI_Parser_ArrayFlagFunc)(struct UCLI_Parser_ArrayFlag*, char**, size_t);
+    typedef void(*UCLI_Parser_ArrayFlagFunc)(UCLI_Parser_ArrayFlag*, char**, size_t);
 
-    struct UVK_PUBLIC_API UCLI_Parser_BooleanFlag
+    typedef struct UVK_PUBLIC_API UCLI_Parser_BooleanFlag
     {
         const char* longType;
         const char* shortType;
         bool* flag;
-    };
+    } UCLI_Parser_BooleanFlag;
 
-    struct UVK_PUBLIC_API UCLI_Parser_ArrayFlag
+    typedef struct UVK_PUBLIC_API UCLI_Parser_ArrayFlag
     {
         const char* longType;
         const char* shortType;
         void* additionalData;
         UCLI_Parser_ArrayFlagFunc func;
-    };
+    } UCLI_Parser_ArrayFlag;
 
-    struct UVK_PUBLIC_API UCLI_Parser_BooleanFlagWithFunc
+    typedef struct UVK_PUBLIC_API UCLI_Parser_BooleanFlagWithFunc
     {
         const char* longType;
         const char* shortType;
         void* additionalData;
         void(*func)(struct UCLI_Parser_BooleanFlagWithFunc*);
-    };
+    } UCLI_Parser_BooleanFlagWithFunc;
 
-    struct UVK_PUBLIC_API UCLI_Parser_Pair
+    typedef struct UVK_PUBLIC_API UCLI_Parser_Pair
     {
         const char* longType;
 
@@ -59,19 +59,19 @@ extern "C"
         bool InternalbFound;
         // Do not touch this, we will copy the data into here
         const char* data;
-    };
+    } UCLI_Parser_Pair;
 
-    struct UVK_PUBLIC_API UCLI_Parser_PairWithFunc
+    typedef struct UVK_PUBLIC_API UCLI_Parser_PairWithFunc
     {
         const char* longType;
         void* additionalData;
         void(*func)(struct UCLI_Parser_PairWithFunc*, const char*);
-    };
+    } UCLI_Parser_PairWithFunc;
 
-    struct UVK_PUBLIC_API UCLI_Parser_Data
+    typedef struct UVK_PUBLIC_API UCLI_Parser_Data
     {
-        struct UCLI_Parser_ArrayFlag defaultArrayFlag;
-        struct UCLI_Parser_ArrayFlag* currentArrayFlag;
+        UCLI_Parser_ArrayFlag defaultArrayFlag;
+        UCLI_Parser_ArrayFlag* currentArrayFlag;
 
         void* unknownArgumentsCallbackAdditionalData;
         UCLI_Parser_UnknownArgumentsCallback unknownArgumentsCallback;
@@ -79,7 +79,7 @@ extern "C"
         char delimiter;
         bool bWindowsStyle;
         bool bFlipBool;
-    };
+    } UCLI_Parser_Data;
 #ifdef __cplusplus
 }
 #endif
