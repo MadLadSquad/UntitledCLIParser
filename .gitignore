@@ -31,7 +31,6 @@
 *.out
 *.app
 
-CMakeLists.txt
 main.*
 cmake-build-*/
 .idea/
