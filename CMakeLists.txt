@@ -8,6 +8,9 @@ set(CMAKE_C_STANDARD 99)
 include_directories(.)
 
 option(WITH_UTF8 "Compiles with UTF-8 support. Requires utfcpp." ON)
+if (WITH_UTF8)
+    add_subdirectory(ThirdParty/utfcpp)
+endif()
 
 set(UCLI_LIBRARY_TYPE "SHARED")
 if (BUILD_VARIANT_STATIC)
