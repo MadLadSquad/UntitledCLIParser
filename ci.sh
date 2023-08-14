@@ -1,5 +1,5 @@
 #!/bin/bash
-cpus=$(grep -c processor /proc/cpuinfo)
+cpus=$(grep -c processor /proc/cpuinfo) || cpu=$(sysctl -n hw.ncpu)
 
 mkdir build
 cd build || exit
