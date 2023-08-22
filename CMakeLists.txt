@@ -17,9 +17,10 @@ if (BUILD_VARIANT_STATIC)
     set(UCLI_LIBRARY_TYPE "STATIC")
 endif()
 
-set(UCLI_HEADERS "Common.h" "CLIParser.hpp" "C/cucli.h")
+set(UCLI_C_HEADERS "C/cucli.h")
+set(UCLI_HEADERS "Common.h" "CLIParser.hpp")
 
-add_library(UntitledCLIParser ${UCLI_LIBRARY_TYPE} C/cucli.cpp CLIParser.cpp ${UCLI_HEADERS})
+add_library(UntitledCLIParser ${UCLI_LIBRARY_TYPE} C/cucli.cpp CLIParser.cpp ${UCLI_HEADERS} ${UCLI_C_HEADERS})
 
 target_compile_definitions(UntitledCLIParser PRIVATE UVK_LOG_EXPORT_FROM_LIBRARY UVK_LIB_COMPILE)
 target_compile_definitions(UntitledCLIParser PUBLIC UIMGUI_CLI_PARSER_MODULE_ENABLED)
@@ -36,6 +37,7 @@ if (UIMGUI_INSTALL)
             LIBRARY DESTINATION lib/
             ARCHIVE DESTINATION lib/)
     install(FILES ${UCLI_HEADERS} DESTINATION include/UntitledCLIParser)
+    install(FILES ${UCLI_C_HEADERS} DESTINATION include/UntitledCLIParser/C)
     install(FILES ${PROJECT_BINARY_DIR}/UntitledCLIParser.pc
             DESTINATION lib/pkgconfig/)
 endif()
