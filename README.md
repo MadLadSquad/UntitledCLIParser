@@ -4,7 +4,7 @@
 [![trello](https://img.shields.io/badge/Trello-UDE-blue])](https://trello.com/b/HmfuRY2K/untitleddesktop)
 [![Discord](https://img.shields.io/discord/717037253292982315.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/4wgH8ZE)
 
-C and C++ parser for CLI arguments
+C and C++ parser for CLI arguments.
 
 Features:
 - [X] Automatic handling of boolean switches
@@ -19,4 +19,4 @@ Features:
 - [X] Complete C and C++ APIs
 
 ## Installation and Learning
-Head to the [wiki](https://github.com/MadLadSquad/UntitledCLIParser/wiki) to learn more about the library and how to use it
+Head to the [wiki](https://github.com/MadLadSquad/UntitledCLIParser/wiki) to learn more about the library and how to use it.
