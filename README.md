@@ -10,7 +10,7 @@ Features:
 - [X] Automatic handling of boolean switches
 - [X] Boolean switches with functions
 - [X] Array support
-- [X] Variable assignment support, i.e. `--test=testing`
+- [X] Variable assignment support, i.e. `--test=test`
 - [X] Short and long arguments supported
 - [X] Short argument bundling supported i.e. `-aBcD` is the same as `-a -B -c -D`
 - [X] Fully Unicode compliant
