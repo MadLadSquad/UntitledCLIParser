@@ -8,7 +8,7 @@ set(CMAKE_C_STANDARD 99)
 include_directories(.)
 
 option(WITH_UTF8 "Compiles with UTF-8 support. Requires utfcpp." ON)
-if (WITH_UTF8)
+if (WITH_UTF8 AND BUILD_VARIANT_VENDOR)
     add_subdirectory(ThirdParty/utfcpp)
 endif()
 
