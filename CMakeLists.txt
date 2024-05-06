@@ -34,8 +34,8 @@ configure_file(UntitledCLIParser.pc.in UntitledCLIParser.pc @ONLY)
 
 if (UIMGUI_INSTALL)
     install(TARGETS UntitledCLIParser
-            LIBRARY DESTINATION lib/
-            ARCHIVE DESTINATION lib/)
+            LIBRARY DESTINATION lib64/
+            ARCHIVE DESTINATION lib64/)
     install(FILES ${UCLI_HEADERS} DESTINATION include/UntitledCLIParser)
     install(FILES ${UCLI_C_HEADERS} DESTINATION include/UntitledCLIParser/C)
     install(FILES ${PROJECT_BINARY_DIR}/UntitledCLIParser.pc
