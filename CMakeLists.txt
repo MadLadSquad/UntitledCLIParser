@@ -1,16 +1,11 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(UntitledCLIParser VERSION 2.2.0.4)
+project(UntitledCLIParser VERSION 3.0.0.0)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 99)
 
 include_directories(.)
-
-option(WITH_UTF8 "Compiles with UTF-8 support. Requires utfcpp." ON)
-if (WITH_UTF8 AND BUILD_VARIANT_VENDOR)
-    add_subdirectory(ThirdParty/utfcpp)
-endif()
 
 set(UCLI_LIBRARY_TYPE "SHARED")
 if (BUILD_VARIANT_STATIC)

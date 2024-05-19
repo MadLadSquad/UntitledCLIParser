@@ -4,7 +4,7 @@
 extern "C"
 {
 #endif
-#define to_class(data) ((UCLI::Parser*)data)
+#define to_class(data) ((UCLI::Parser*)(data))
 
     void UCLI_Parser_init(UCLI_Parser_Data* data)
     {
