@@ -1,6 +1,7 @@
 #include <cstring>
 #include "CLIParser.hpp"
 #include <span>
+#include <iostream>
 
 void UCLI::Parser::parse(int argc, char** argv,
                          ArrayFlag* arrayFlags, size_t arrayFlagsSize,
@@ -144,7 +145,7 @@ void UCLI::Parser::parseLongArgument(std::vector<char*>& args, uint8_t frontTrun
                        Pair* pairs, size_t pairsSize,
                        PairWithFunc* pairsWithFunc, size_t pairsWithFuncSize, bool bCheckShort) noexcept
 {
-    std::string currentTmp = tmp.substr(0, frontTruncate);
+    std::string currentTmp = tmp.substr(frontTruncate);
 
     FOR_EACH_WITH_CHECK(booleanFlags, booleanFlagsSize, a, {
         if (a.longType == currentTmp)

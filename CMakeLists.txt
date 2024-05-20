@@ -20,10 +20,6 @@ add_library(UntitledCLIParser ${UCLI_LIBRARY_TYPE} C/cucli.cpp CLIParser.cpp ${U
 target_compile_definitions(UntitledCLIParser PRIVATE UVK_LOG_EXPORT_FROM_LIBRARY UVK_LIB_COMPILE)
 target_compile_definitions(UntitledCLIParser PUBLIC UIMGUI_CLI_PARSER_MODULE_ENABLED)
 list(APPEND compile_defs "UIMGUI_CLI_PARSER_MODULE_ENABLED")
-if (WITH_UTF)
-    target_compile_definitions(UntitledCLIParser PUBLIC UCLI_COMPILE_WITH_UTF_SUPPORT)
-    list(APPEND compile_defs "UCLI_COMPILE_WITH_UTF_SUPPORT")
-endif()
 
 configure_file(UntitledCLIParser.pc.in UntitledCLIParser.pc @ONLY)
 
