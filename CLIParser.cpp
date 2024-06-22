@@ -3,15 +3,13 @@
 #include <span>
 #include <iostream>
 
-void UCLI::Parser::parse(int argc, char** argv,
-                         ArrayFlag* arrayFlags, size_t arrayFlagsSize,
-                         BooleanFlag* booleanFlags, size_t booleanFlagsSize,
-                         BooleanFlagWithFunc* booleanFlagsWithFunc, size_t booleanFlagsWithFuncSize,
-                         Pair* pairs, size_t pairsSize,
-                         PairWithFunc* pairsWithFunc, size_t pairsWithFuncSize) noexcept
+void UCLI::Parser::parse(const int argc, char** argv,
+                         ArrayFlag* arrayFlags, const size_t arrayFlagsSize,
+                         BooleanFlag* booleanFlags, const size_t booleanFlagsSize,
+                         BooleanFlagWithFunc* booleanFlagsWithFunc, const size_t booleanFlagsWithFuncSize,
+                         Pair* pairs, const size_t pairsSize,
+                         PairWithFunc* pairsWithFunc, const size_t pairsWithFuncSize) noexcept
 {
-    std::string tmp;
-
     std::string singleChar;
     singleChar.resize(1);
 
@@ -19,7 +17,7 @@ void UCLI::Parser::parse(int argc, char** argv,
 
     for (int i = 0; i < argc; i++)
     {
-        tmp = argv[i];
+        std::string tmp = argv[i];
         if (tmp.size() >= 2 && tmp[0] == data.delimiter)
         {
             // long flag
@@ -53,23 +51,23 @@ void UCLI::Parser::parse(int argc, char** argv,
     data.currentArrayFlag->func(data.currentArrayFlag, currentArray.data(), currentArray.size());
 }
 
-void UCLI::Parser::setDefaultArray(void* additionalData, ArrayFlagFunc func) noexcept
+void UCLI::Parser::setDefaultArray(void* additionalData, const ArrayFlagFunc func) noexcept
 {
     data.defaultArrayFlag.additionalData = additionalData;
     data.defaultArrayFlag.func = func;
 }
 
-void UCLI::Parser::setDelimiter(char del) noexcept
+void UCLI::Parser::setDelimiter(const char del) noexcept
 {
     data.delimiter = del;
 }
 
-void UCLI::Parser::setArgumentStyleWindows(bool bWindows) noexcept
+void UCLI::Parser::setArgumentStyleWindows(const bool bWindows) noexcept
 {
     data.bWindowsStyle = bWindows;
 }
 
-void UCLI::Parser::setUnknownArgumentCallback(UnknownArgumentsCallback func, void* callbackData) noexcept
+void UCLI::Parser::setUnknownArgumentCallback(const UnknownArgumentsCallback func, void* callbackData) noexcept
 {
     data.unknownArgumentsCallback = func;
     data.unknownArgumentsCallbackAdditionalData = callbackData;
@@ -98,9 +96,9 @@ UCLI::Parser::Parser() noexcept
 #define FOR_EACH_WITH_CHECK(x, y, z, w) if ((x) != nullptr) for (auto& (z) : std::span(x, y)) w
 
 void UCLI::Parser::parseShortArgument(std::vector<char*>& args, std::string& singleChar, const std::string& tmp,
-                                      ArrayFlag* arrayFlags, size_t arrayFlagsSize,
-                                      BooleanFlag* booleanFlags, size_t booleanFlagsSize,
-                                      BooleanFlagWithFunc* booleanFlagsWithFunc, size_t booleanFlagsWithFuncSize) noexcept
+                                      ArrayFlag* arrayFlags, const size_t arrayFlagsSize,
+                                      BooleanFlag* booleanFlags, const size_t booleanFlagsSize,
+                                      BooleanFlagWithFunc* booleanFlagsWithFunc, const size_t booleanFlagsWithFuncSize) noexcept
 {
     for (size_t f = 1; f < tmp.size(); f++)
     {
@@ -138,12 +136,12 @@ continue_from_single_flag_inner_loops:;
     }
 }
 
-void UCLI::Parser::parseLongArgument(std::vector<char*>& args, uint8_t frontTruncate, std::string& tmp,
-                       ArrayFlag* arrayFlags, size_t arrayFlagsSize,
-                       BooleanFlag* booleanFlags, size_t booleanFlagsSize,
-                       BooleanFlagWithFunc* booleanFlagsWithFunc, size_t booleanFlagsWithFuncSize,
-                       Pair* pairs, size_t pairsSize,
-                       PairWithFunc* pairsWithFunc, size_t pairsWithFuncSize, bool bCheckShort) noexcept
+void UCLI::Parser::parseLongArgument(std::vector<char*>& args, const uint8_t frontTruncate, const std::string& tmp,
+                       ArrayFlag* arrayFlags, const size_t arrayFlagsSize,
+                       BooleanFlag* booleanFlags, const size_t booleanFlagsSize,
+                       BooleanFlagWithFunc* booleanFlagsWithFunc, const size_t booleanFlagsWithFuncSize,
+                       Pair* pairs, const size_t pairsSize,
+                       PairWithFunc* pairsWithFunc, const size_t pairsWithFuncSize, const bool bCheckShort) noexcept
 {
     std::string currentTmp = tmp.substr(frontTruncate);
 
@@ -203,7 +201,7 @@ void UCLI::Parser::parseLongArgument(std::vector<char*>& args, uint8_t frontTrun
     data.unknownArgumentsCallback(tmp.c_str(), data.unknownArgumentsCallbackAdditionalData);
 }
 
-void UCLI::Parser::cleanupPairs(Pair* pairs, size_t pairsSize)
+void UCLI::Parser::cleanupPairs(Pair* pairs, const size_t pairsSize)
 {
     FOR_EACH_WITH_CHECK(pairs, pairsSize, a, {
         if (a.InternalbFound)
@@ -214,14 +212,14 @@ void UCLI::Parser::cleanupPairs(Pair* pairs, size_t pairsSize)
     })
 }
 
-void UCLI::Parser::setBooleanFlipping(bool bFlip) noexcept
+void UCLI::Parser::setBooleanFlipping(const bool bFlip) noexcept
 {
     data.bFlipBool = bFlip;
 }
 
 #define PASS_VECTOR(x, y) const_cast<x*>((y).data()), (y).size()
 
-void UCLI::Parser::parse(int argc, char** argv, const std::vector<ArrayFlag>& arrayFlags,
+void UCLI::Parser::parse(const int argc, char** argv, const std::vector<ArrayFlag>& arrayFlags,
                          const std::vector<BooleanFlag>& booleanFlags,
                          const std::vector<BooleanFlagWithFunc>& booleanFlagsWithFunc,
                          const std::vector<Pair>& pairs,

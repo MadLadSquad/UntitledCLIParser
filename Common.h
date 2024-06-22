@@ -1,7 +1,6 @@
 #pragma once
 #include <stdio.h>
 #include <stdbool.h>
-#include <stdint.h>
 #ifdef UVK_LOG_EXPORT_FROM_LIBRARY
     #ifdef _WIN32
         #ifdef UVK_LIB_COMPILE

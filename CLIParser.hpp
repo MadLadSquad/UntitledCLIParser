@@ -61,7 +61,7 @@ namespace UCLI
                                 BooleanFlag* booleanFlags, size_t booleanFlagsSize,
                                 BooleanFlagWithFunc* booleanFlagsWithFunc, size_t booleanFlagsWithFuncSize) noexcept;
 
-        void parseLongArgument(std::vector<char*>& args, uint8_t frontTruncate, std::string& tmp,
+        void parseLongArgument(std::vector<char*>& args, uint8_t frontTruncate, const std::string& tmp,
                                ArrayFlag* arrayFlags = nullptr, size_t arrayFlagsSize = 0,
                                BooleanFlag* booleanFlags = nullptr, size_t booleanFlagsSize = 0,
                                BooleanFlagWithFunc* booleanFlagsWithFunc = nullptr, size_t booleanFlagsWithFuncSize = 0,
