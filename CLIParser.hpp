@@ -7,7 +7,7 @@ namespace UCLI
 {
 
     // UntitledImGuiFramework Event Safety - Any time but recommended you use at Startup
-    class UVK_PUBLIC_API Parser
+    class MLS_PUBLIC_API Parser
     {
     public:
         typedef UCLI_Parser_ArrayFlag ArrayFlag;

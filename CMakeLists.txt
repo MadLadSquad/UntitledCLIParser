@@ -17,7 +17,7 @@ set(UCLI_HEADERS "Common.h" "CLIParser.hpp")
 
 add_library(UntitledCLIParser ${UCLI_LIBRARY_TYPE} C/cucli.cpp CLIParser.cpp ${UCLI_HEADERS} ${UCLI_C_HEADERS})
 
-target_compile_definitions(UntitledCLIParser PRIVATE UVK_LOG_EXPORT_FROM_LIBRARY UVK_LIB_COMPILE)
+target_compile_definitions(UntitledCLIParser PRIVATE MLS_EXPORT_LIBRARY MLS_LIB_COMPILE)
 target_compile_definitions(UntitledCLIParser PUBLIC UIMGUI_CLI_PARSER_MODULE_ENABLED)
 list(APPEND compile_defs "UIMGUI_CLI_PARSER_MODULE_ENABLED")
 

@@ -2,22 +2,18 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
-#ifdef UVK_LOG_EXPORT_FROM_LIBRARY
+#ifdef MLS_EXPORT_LIBRARY
     #ifdef _WIN32
-        #ifdef UVK_LIB_COMPILE
-            #define UVK_PUBLIC_API __declspec(dllexport)
-            #define UVK_PUBLIC_TMPL_API __declspec(dllexport)
+        #ifdef MLS_LIB_COMPILE
+            #define MLS_PUBLIC_API __declspec(dllexport)
         #else
-            #define UVK_PUBLIC_API __declspec(dllimport)
-            #define UVK_PUBLIC_TMPL_API
+            #define MLS_PUBLIC_API __declspec(dllimport)
         #endif
     #else
-        #define UVK_PUBLIC_API
-        #define UVK_PUBLIC_TMPL_API
+        #define MLS_PUBLIC_API
     #endif
 #else
-    #define UVK_PUBLIC_API
-    #define UVK_PUBLIC_TMPL_API
+    #define MLS_PUBLIC_API
 #endif
 
 #ifdef __cplusplus
@@ -29,14 +25,14 @@ extern "C"
     typedef void(*UCLI_Parser_UnknownArgumentsCallback)(const char*, void*);
     typedef void(*UCLI_Parser_ArrayFlagFunc)(UCLI_Parser_ArrayFlag*, char**, size_t);
 
-    typedef struct UVK_PUBLIC_API UCLI_Parser_BooleanFlag
+    typedef struct MLS_PUBLIC_API UCLI_Parser_BooleanFlag
     {
         const char* longType;
         const char* shortType;
         bool* flag;
     } UCLI_Parser_BooleanFlag;
 
-    typedef struct UVK_PUBLIC_API UCLI_Parser_ArrayFlag
+    typedef struct MLS_PUBLIC_API UCLI_Parser_ArrayFlag
     {
         const char* longType;
         const char* shortType;
@@ -44,7 +40,7 @@ extern "C"
         UCLI_Parser_ArrayFlagFunc func;
     } UCLI_Parser_ArrayFlag;
 
-    typedef struct UVK_PUBLIC_API UCLI_Parser_BooleanFlagWithFunc
+    typedef struct MLS_PUBLIC_API UCLI_Parser_BooleanFlagWithFunc
     {
         const char* longType;
         const char* shortType;
@@ -52,7 +48,7 @@ extern "C"
         void(*func)(struct UCLI_Parser_BooleanFlagWithFunc*);
     } UCLI_Parser_BooleanFlagWithFunc;
 
-    typedef struct UVK_PUBLIC_API UCLI_Parser_Pair
+    typedef struct MLS_PUBLIC_API UCLI_Parser_Pair
     {
         const char* longType;
 
@@ -62,14 +58,14 @@ extern "C"
         const char* data;
     } UCLI_Parser_Pair;
 
-    typedef struct UVK_PUBLIC_API UCLI_Parser_PairWithFunc
+    typedef struct MLS_PUBLIC_API UCLI_Parser_PairWithFunc
     {
         const char* longType;
         void* additionalData;
         void(*func)(struct UCLI_Parser_PairWithFunc*, const char*);
     } UCLI_Parser_PairWithFunc;
 
-    typedef struct UVK_PUBLIC_API UCLI_Parser_Data
+    typedef struct MLS_PUBLIC_API UCLI_Parser_Data
     {
         UCLI_Parser_ArrayFlag defaultArrayFlag;
         UCLI_Parser_ArrayFlag* currentArrayFlag;
