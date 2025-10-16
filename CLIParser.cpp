@@ -93,7 +93,7 @@ UCLI::Parser::Parser() noexcept
     init();
 }
 
-#define FOR_EACH_WITH_CHECK(x, y, z, w) if ((x) != nullptr) for (auto& (z) : std::span(x, y)) w
+#define FOR_EACH_WITH_CHECK(x, y, z, w) if ((x) != nullptr) for (auto& z : std::span(x, y)) w
 
 void UCLI::Parser::parseShortArgument(std::vector<char*>& args, std::string& singleChar, const std::string& tmp,
                                       ArrayFlag* arrayFlags, const size_t arrayFlagsSize,
