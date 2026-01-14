@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(UntitledCLIParser VERSION 5.0.0.1)
+project(UntitledCLIParser VERSION 6.0.0.0)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 99)
@@ -15,7 +15,12 @@ endif()
 set(UCLI_C_HEADERS "C/cucli.h")
 set(UCLI_HEADERS "Common.h" "CLIParser.hpp")
 
-add_library(UntitledCLIParser ${UCLI_LIBRARY_TYPE} C/cucli.cpp CLIParser.cpp ${UCLI_HEADERS} ${UCLI_C_HEADERS})
+add_library(UntitledCLIParser ${UCLI_LIBRARY_TYPE} C/cucli.cpp CLIParser.cpp Parser.cpp Help.cpp
+        ${UCLI_HEADERS} ${UCLI_C_HEADERS}
+)
+add_executable(test main.cpp)
+
+target_link_libraries(test UntitledCLIParser)
 
 target_compile_definitions(UntitledCLIParser PRIVATE MLS_EXPORT_LIBRARY MLS_LIB_COMPILE)
 target_compile_definitions(UntitledCLIParser PUBLIC UIMGUI_CLI_PARSER_MODULE_ENABLED)

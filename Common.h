@@ -20,63 +20,105 @@
 extern "C"
 {
 #endif
-    typedef struct UCLI_Parser_ArrayFlag UCLI_Parser_ArrayFlag;
 
-    typedef void(*UCLI_Parser_UnknownArgumentsCallback)(const char*, void*);
-    typedef void(*UCLI_Parser_ArrayFlagFunc)(UCLI_Parser_ArrayFlag*, char**, size_t);
+    #ifdef __cplusplus
+        #define CLITERAL(x, ...)                \
+            []() {                              \
+                static x b[] = { __VA_ARGS__ }; \
+                return b;                       \
+            }()
+    #else
+        #define CLITERAL(x, ...) (x){ __VA_ARGS__ }
+    #endif
 
-    typedef struct MLS_PUBLIC_API UCLI_Parser_BooleanFlag
+
+    // Initialise a pointer with an array inline
+    #define UCLI_MAKE_FLAG_ARRAY(...) CLITERAL(UCLI_Flag, __VA_ARGS__)
+    // Initialise a pointer with an array inline
+    #define UCLI_MAKE_COMMAND_ARRAY(...) CLITERAL(UCLI_Command, __VA_ARGS__)
+    // Initialise a pointer with an array inline
+    #define UCLI_MAKE_STRING_ARRAY(...) CLITERAL(char*, __VA_ARGS__)
+
+
+    typedef enum UCLI_CommandType
     {
-        const char* longType;
-        const char* shortType;
-        bool* flag;
-    } UCLI_Parser_BooleanFlag;
+        UCLI_COMMAND_TYPE_VOID = 0,
+        UCLI_COMMAND_TYPE_BOOL = 0,
+        UCLI_COMMAND_TYPE_STRING = 1,
+        UCLI_COMMAND_TYPE_ARRAY = 2
+    } UCLI_CommandType;
 
-    typedef struct MLS_PUBLIC_API UCLI_Parser_ArrayFlag
+    typedef struct UCLI_Command UCLI_Command;
+    typedef struct UCLI_Flag UCLI_Flag;
+
+    typedef void(*UCLI_CommandEvent)(const UCLI_Command*);
+    typedef void(*UCLI_FlagEvent)(const UCLI_Flag*);
+
+    typedef struct MLS_PUBLIC_API UCLI_Flag
     {
-        const char* longType;
-        const char* shortType;
-        void* additionalData;
-        UCLI_Parser_ArrayFlagFunc func;
-    } UCLI_Parser_ArrayFlag;
+        const char* longName;
+        char shortName;
+        const char* description;
 
-    typedef struct MLS_PUBLIC_API UCLI_Parser_BooleanFlagWithFunc
+        char** defaultValues;
+        size_t defaultValuesCount;
+
+        union
+        {
+            struct
+            {
+                char** stringValues;
+                size_t stringValuesCount;
+
+                struct
+                {
+                    bool _bFreeStringValues;
+                    bool _bFreeInnerStringValues;
+                } _internal_;
+            } stringValues;
+            bool* boolValue;
+        };
+        UCLI_CommandType type;
+
+        UCLI_FlagEvent callback;
+        void* context;
+    } UCLI_Flag;
+
+    typedef struct MLS_PUBLIC_API UCLI_Command
     {
-        const char* longType;
-        const char* shortType;
-        void* additionalData;
-        void(*func)(struct UCLI_Parser_BooleanFlagWithFunc*);
-    } UCLI_Parser_BooleanFlagWithFunc;
+        const char* longName;
+        char shortName;
+        const char* description;
 
-    typedef struct MLS_PUBLIC_API UCLI_Parser_Pair
-    {
-        const char* longType;
+        char** defaultValues;
+        size_t defaultValuesCount;
 
-        // This is internal and should always be set to false
-        bool InternalbFound;
-        // Do not touch this, we will copy the data into here
-        const char* data;
-    } UCLI_Parser_Pair;
+        union
+        {
+            struct
+            {
+                char** stringValues;
+                size_t stringValuesCount;
+                struct
+                {
+                    bool _bFreeStringValues;
+                    bool _bFreeInnerStringValues;
+                } _internal_;
+            } stringValues;
+            bool* boolValue;
+        };
+        UCLI_CommandType type;
 
-    typedef struct MLS_PUBLIC_API UCLI_Parser_PairWithFunc
-    {
-        const char* longType;
-        void* additionalData;
-        void(*func)(struct UCLI_Parser_PairWithFunc*, const char*);
-    } UCLI_Parser_PairWithFunc;
+        UCLI_Command* subcommands;
+        size_t subcommandsCount;
 
-    typedef struct MLS_PUBLIC_API UCLI_Parser_Data
-    {
-        UCLI_Parser_ArrayFlag defaultArrayFlag;
-        UCLI_Parser_ArrayFlag* currentArrayFlag;
+        UCLI_Flag* flags;
+        size_t flagsCount;
 
-        void* unknownArgumentsCallbackAdditionalData;
-        UCLI_Parser_UnknownArgumentsCallback unknownArgumentsCallback;
+        UCLI_CommandEvent callback;
+        void* context;
+    } UCLI_Command;
 
-        char delimiter;
-        bool bWindowsStyle;
-        bool bFlipBool;
-    } UCLI_Parser_Data;
 #ifdef __cplusplus
 }
 #endif

@@ -1,73 +1,75 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <iostream>
+#include <string.h>
 #include "Common.h"
 
 namespace UCLI
 {
+    typedef UCLI_Command Command;
+    typedef UCLI_Flag Flag;
+    typedef UCLI_CommandType CommandType;
 
-    // UntitledImGuiFramework Event Safety - Any time but recommended you use at Startup
     class MLS_PUBLIC_API Parser
     {
     public:
-        typedef UCLI_Parser_ArrayFlag ArrayFlag;
-        typedef UCLI_Parser_BooleanFlag BooleanFlag;
-        typedef UCLI_Parser_BooleanFlagWithFunc BooleanFlagWithFunc;
-        typedef UCLI_Parser_Pair Pair;
-        typedef UCLI_Parser_PairWithFunc PairWithFunc;
-        typedef UCLI_Parser_UnknownArgumentsCallback UnknownArgumentsCallback;
-        typedef UCLI_Parser_ArrayFlagFunc ArrayFlagFunc;
+        Parser() noexcept = default;
 
-        Parser() noexcept;
+        Parser& setHelpHeader(const char* header) noexcept;
+        Parser& setHelpFooter(const char* footer) noexcept;
+        // Set to true by default
+        Parser& setUseGeneratedHelp(bool bUseGeneratedHelp) noexcept;
+        // Set to 2 by default
+        Parser& setHelpSubcommandIndentationSpaces(size_t indentSpaces) noexcept;
 
-        // UntitledImGuiFramework Event Safety - Any time
-        void init() noexcept;
+        // The default is `-`
+        Parser& setFlagPrefix(char prefix) noexcept;
+        // The default is `,`
+        Parser& setArrayDelimiter(char delimiter) noexcept;
 
-        // UntitledImGuiFramework Event Safety - Any time
-        void setDelimiter(char del) noexcept;
-        // UntitledImGuiFramework Event Safety - Any time
-        void setArgumentStyleWindows(bool bWindows) noexcept;
+        // Whether to toggle boolean arguments or to set them to true. The default behaviour is to set them to true
+        Parser& setBoolToggle(bool bToggle) noexcept;
 
-        // UntitledImGuiFramework Event Safety - Any time
-        void setBooleanFlipping(bool bFlip) noexcept;
+        Parser& pushCommand(const Command& command) noexcept;
+        Parser& pushFlag(const Flag& flag) noexcept;
 
-        // UntitledImGuiFramework Event Safety - Any time
-        void setUnknownArgumentCallback(UnknownArgumentsCallback func, void* callbackData = nullptr) noexcept;
+        Parser& pushDefaultCommand(const Command& command) noexcept;
+        Parser& pushDefaultFlag(const Flag& flag) noexcept;
 
-        // UntitledImGuiFramework Event Safety - Any time
-        void setDefaultArray(void* additionalData, ArrayFlagFunc func) noexcept;
+        Parser& parse(int argc, char** argv) noexcept;
 
-        // UntitledImGuiFramework Event Safety - Any time
-        void parse(int argc, char** argv,
-                   ArrayFlag* arrayFlags = nullptr, size_t arrayFlagsSize = 0,
-                   BooleanFlag* booleanFlags = nullptr, size_t booleanFlagsSize = 0,
-                   BooleanFlagWithFunc* booleanFlagsWithFunc = nullptr, size_t booleanFlagsWithFuncSize = 0,
-                   Pair* pairs = nullptr, size_t pairsSize = 0,
-                   PairWithFunc* pairsWithFunc = nullptr, size_t pairsWithFuncSize = 0) noexcept;
-
-        // UntitledImGuiFramework Event Safety - Any time
-        void parse(int argc, char** argv,
-                   const std::vector<ArrayFlag>& arrayFlags = {},
-                   const std::vector<BooleanFlag>& booleanFlags = {},
-                   const std::vector<BooleanFlagWithFunc>& booleanFlagsWithFunc = {},
-                   const std::vector<Pair>& pairs = {},
-                   const std::vector<PairWithFunc>& pairsWithFunc = {}) noexcept;
-
-        // UntitledImGuiFramework Event Safety - Any time
-        static void cleanupPairs(UCLI_Parser_Pair* pairs, size_t pairsSize);
+        Parser& release() noexcept;
+        ~Parser() noexcept;
     private:
-        void parseShortArgument(std::vector<char*>& args, std::string& singleChar, const std::string& tmp,
-                                ArrayFlag* arrayFlags, size_t arrayFlagsSize,
-                                BooleanFlag* booleanFlags, size_t booleanFlagsSize,
-                                BooleanFlagWithFunc* booleanFlagsWithFunc, size_t booleanFlagsWithFuncSize) noexcept;
+        std::string helpHeader;
+        std::string helpFooter;
 
-        void parseLongArgument(std::vector<char*>& args, uint8_t frontTruncate, const std::string& tmp,
-                               ArrayFlag* arrayFlags = nullptr, size_t arrayFlagsSize = 0,
-                               BooleanFlag* booleanFlags = nullptr, size_t booleanFlagsSize = 0,
-                               BooleanFlagWithFunc* booleanFlagsWithFunc = nullptr, size_t booleanFlagsWithFuncSize = 0,
-                               Pair* pairs = nullptr, size_t pairsSize = 0,
-                               PairWithFunc* pairsWithFunc = nullptr, size_t pairsWithFuncSize = 0, bool bCheckShort = false) noexcept;
+        std::string indentationString = "  ";
 
-        UCLI_Parser_Data data{};
+        char arrayDelimiter = ',';
+        char flagPrefix = '-';
+
+        bool bToggleBooleans = false;
+
+        bool bUseHelp = true;
+        bool bShowHelp = false;
+
+        std::vector<Command> commands{};
+        std::vector<Flag> flags{};
+
+        Command* defaultCommand = nullptr;
+        Flag* defaultFlag = nullptr;
+
+        void pushHelp() noexcept;
+
+        static void printCommands(const Command* commands, size_t size, const std::string& indentationString, size_t indentation) noexcept;
+        static void printFlags(Flag* flags, size_t size, const std::string& indentationString, size_t indentation) noexcept;
+
+        static void freeCommands(Command& command) noexcept;
+        static void freeFlags(Flag& command) noexcept;
+
+        static void helpCommand(const Flag* command) noexcept;
+        static void helpCommand(const Command* command) noexcept;
     };
 }
