@@ -101,16 +101,18 @@ UCLI::Parser::~Parser() noexcept
     release();
 }
 
-UCLI_CallbackResult UCLI_EMPTY_FLAG_CALLBACK(const UCLI_Flag*f)
+UCLI_CallbackResult UCLI_EMPTY_FLAG_CALLBACK(const UCLI_Flag* flag)
 {
-    std::cout << f->longName << std::endl;
-    std::cout << f->description << std::endl;
+    // TODO: remove
+    std::cout << flag->longName << std::endl;
+    std::cout << flag->description << std::endl;
     return UCLI_CALLBACK_RESULT_OK;
 }
 
-UCLI_CallbackResult UCLI_EMPTY_COMMAND_CALLBACK(const UCLI_Command*f)
+UCLI_CallbackResult UCLI_EMPTY_COMMAND_CALLBACK(const UCLI_Command* flag)
 {
-    std::cout << f->longName << std::endl;
-    std::cout << f->description << std::endl;
+    // TODO: remove
+    std::cout << flag->longName << std::endl;
+    std::cout << flag->description << std::endl;
     return UCLI_CALLBACK_RESULT_OK;
 }

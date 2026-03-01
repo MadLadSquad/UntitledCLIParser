@@ -69,8 +69,8 @@ namespace UCLI
         static void printCommands(const Command* commands, size_t size, const std::string& indentationString, size_t indentation) noexcept;
         static void printFlags(const Flag* flags, size_t size, const std::string& indentationString, size_t indentation) noexcept;
 
-        bool findFlagsRecursive(int& i, int argc, char** argv, int assignmentIndex, int64_t& depth, const Command* command, const std::string& cleanName) noexcept;
-        bool findFlagsRecursive(int& i, int argc, char** argv, int64_t& depth, const Command* command, char shortName, bool bBatched) noexcept;
+        bool findFlagsRecursive(int& i, int argc, char** argv, int assignmentIndex, int64_t depth, const Command* command, const std::string& cleanName) noexcept;
+        bool findFlagsRecursive(int& i, int argc, char** argv, int64_t depth, const Command* command, char shortName, bool bBatched) noexcept;
 
         static void freeCommands(Command& command) noexcept;
         static void freeFlags(Flag& command) noexcept;

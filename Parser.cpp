@@ -347,7 +347,7 @@ static int getAssignmentIndex(const char* str) noexcept
     return assignmentIndex;
 }
 
-bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, const int assignmentIndex, int64_t& depth, const Command* command, const std::string& cleanName) noexcept
+bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, const int assignmentIndex, const int64_t depth, const Command* command, const std::string& cleanName) noexcept
 {
     for (size_t j = 0; j < command->flagsCount; j++)
     {
@@ -371,14 +371,11 @@ bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, const
     }
 
     if (command->_internal_parent != nullptr)
-    {
-        depth++;
-        return findFlagsRecursive(i, argc, argv, assignmentIndex, depth, command->_internal_parent, cleanName);
-    }
+        return findFlagsRecursive(i, argc, argv, assignmentIndex, depth + 1, command->_internal_parent, cleanName);
     return false;
 }
 
-bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, int64_t& depth, const Command* command, const char shortName, const bool bBatched) noexcept
+bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, const int64_t depth, const Command* command, const char shortName, const bool bBatched) noexcept
 {
     for (size_t j = 0; j < command->flagsCount; j++)
     {
@@ -402,10 +399,7 @@ bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, int64
     }
 
     if (command->_internal_parent != nullptr)
-    {
-        depth++;
-        return findFlagsRecursive(i, argc, argv, depth, command->_internal_parent, shortName, bBatched);
-    }
+        return findFlagsRecursive(i, argc, argv, depth + 1, command->_internal_parent, shortName, bBatched);
     return false;
 }
 
@@ -462,8 +456,6 @@ UCLI::Parser& UCLI::Parser::parse(const int argc, char** argv) noexcept
                 if (current[1] == '\0' || (current[1] == flagPrefix && current[2] == '\0'))
                     continue;
 
-                int64_t depth = 0;
-
                 // --flag
                 if (current[1] == flagPrefix)
                 {
@@ -476,7 +468,7 @@ UCLI::Parser& UCLI::Parser::parse(const int argc, char** argv) noexcept
                         assignmentIndex += 2; // + 2 to account for removing the --
                     }
 
-                    if (!findFlagsRecursive(i, argc, argv, assignmentIndex, depth, currentCommand, cleanName) && defaultFlag != nullptr)
+                    if (!findFlagsRecursive(i, argc, argv, assignmentIndex, 0, currentCommand, cleanName) && defaultFlag != nullptr)
                     {
                         defaultFlag->_internal_ctx_ = argv[i];
                         executeCommand(i, argc, argv, *defaultFlag, -1, arrayDelimiter, bToggleBooleans, flagPrefix, false, 0, callbacks);
@@ -492,7 +484,7 @@ UCLI::Parser& UCLI::Parser::parse(const int argc, char** argv) noexcept
                                 i,
                                 argc,
                                 argv,
-                                depth,
+                                0,
                                 currentCommand,
                                 current[f],
                                 f > 1 || (f == 1 && current[f + 1] != '\0')
@@ -569,7 +561,6 @@ default_skip:
                 return static_cast<UCLI::Flag*>(x.ptr)->priority > static_cast<UCLI::Flag*>(y.ptr)->priority;
             }
         );
-
 
         for (const auto& a : callbacks)
         {
