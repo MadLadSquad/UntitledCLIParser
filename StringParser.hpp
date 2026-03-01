@@ -1,0 +1,84 @@
+#pragma once
+
+/**
+ * This is a parser for arguments of type UCLI_COMMAND_TYPE_STRING. The syntax is as follows:
+ * - `command`, `-c`, `-cC`, `c` - uses the default arguments if set or sets the string value to null
+ * - `-c value`, `c value` - uses the next argument as the value
+ * - `-cC value` - same as 1, value is parsed as another command/flag
+ * - `command=value` - uses the assigned value
+ * - `command=` - same as 1
+ * - `command value` - will set the value to value
+ * - `command --value` - will use the default arguments if set
+ * - `command --boolean-flag --value-flag=1 --value-flag2 2 test`(but not --command!) - A special case for commands
+ *    in the shape of `git clone --recursive --depth 1 https://...` where we parse the flags until we find the value.
+ */
+template<typename T>
+static void loadStringCommand(int& i, const int argc, char** argv, T& command, const int64_t assignmentIndex, const bool bForcedDefault, const char flagPrefix) noexcept
+{
+    if (assignmentIndex >= 0)
+    {
+        const std::string_view str = &argv[i][assignmentIndex + 1];
+
+        if (str.empty())
+        {
+            command.stringValues.stringValues = nullptr;
+            command.stringValues.stringValuesCount = 0;
+
+            command.stringValues._internal_._bFreeStringValues = false;
+            command.stringValues._internal_._bFreeInnerStringValues = false;
+
+            return;
+        }
+
+        command.stringValues.stringValues = static_cast<char**>(malloc(sizeof(char**)));
+        command.stringValues.stringValues[0] = static_cast<char*>(malloc(str.size() * sizeof(char)));
+
+        memcpy(command.stringValues.stringValues[0], str.data(), str.size() * sizeof(char));
+
+        command.stringValues.stringValuesCount = 1;
+
+        // Owned by us
+        command.stringValues._internal_._bFreeStringValues = true;
+        command.stringValues._internal_._bFreeInnerStringValues = true;
+    }
+    else
+    {
+        // Owned by the user
+        if (!bForcedDefault && argc > (i + 1) && argv[i + 1][0] != flagPrefix)
+        {
+            i++; // Skip to the next argument
+
+            command.stringValues.stringValues = argv + i;
+            command.stringValues.stringValuesCount = 1;
+        }
+        else if (!bForcedDefault && argc > (i + 1) && argv[i + 1][0] == flagPrefix && std::is_same_v<T, UCLI::Command>)
+        {
+            // Special case: we have encountered a situation like this: `git clone --recursive https://...`
+            // where we're at `clone`.
+            //
+            // To fix this issue, we start parsing flags forward until we find a non-flag value. If the value is
+            // associated with a flag that will consume it, it is set for the flag, otherwise it's set as the
+            // command's value
+            //
+            // For example: `git clone --recursive --depth=1 --depth 2 https://...` will be interpreted as if
+            // recursive = true, depth = 1, depth = 2, clone="https://..."
+            // TODO:
+        }
+        else
+        {
+            if (command.defaultValues != nullptr && command.defaultValuesCount > 0)
+            {
+                command.stringValues.stringValues = command.defaultValues;
+                command.stringValues.stringValuesCount = command.defaultValuesCount;
+            }
+            else
+            {
+                command.stringValues.stringValues = nullptr;
+                command.stringValues.stringValuesCount = 0;
+            }
+        }
+
+        command.stringValues._internal_._bFreeStringValues = false;
+        command.stringValues._internal_._bFreeInnerStringValues = false;
+    }
+}
