@@ -10,6 +10,7 @@ namespace UCLI
     typedef UCLI_Command Command;
     typedef UCLI_Flag Flag;
     typedef UCLI_CommandType CommandType;
+    typedef UCLI_CallbackResult CallbackResult;
 
     class MLS_PUBLIC_API Parser
     {
@@ -58,18 +59,32 @@ namespace UCLI
         std::vector<Command> commands{};
         std::vector<Flag> flags{};
 
+        Command* currentCommand = nullptr;
+
         Command* defaultCommand = nullptr;
         Flag* defaultFlag = nullptr;
 
         void pushHelp() noexcept;
 
         static void printCommands(const Command* commands, size_t size, const std::string& indentationString, size_t indentation) noexcept;
-        static void printFlags(Flag* flags, size_t size, const std::string& indentationString, size_t indentation) noexcept;
+        static void printFlags(const Flag* flags, size_t size, const std::string& indentationString, size_t indentation) noexcept;
+
+        bool findFlagsRecursive(int& i, int argc, char** argv, int assignmentIndex, int64_t& depth, const Command* command, const std::string& cleanName) noexcept;
+        bool findFlagsRecursive(int& i, int argc, char** argv, int64_t& depth, const Command* command, char shortName, bool bBatched) noexcept;
 
         static void freeCommands(Command& command) noexcept;
         static void freeFlags(Flag& command) noexcept;
 
-        static void helpCommand(const Flag* command) noexcept;
-        static void helpCommand(const Command* command) noexcept;
+    public:
+        struct CallbackObject
+        {
+            void* ptr = nullptr;
+            bool bCommand = false;
+        };
+
+        static CallbackResult helpCommand(const Flag* command) noexcept;
+        static CallbackResult helpCommand(const Command* command) noexcept;
+    private:
+        std::deque<CallbackObject> callbacks;
     };
 }

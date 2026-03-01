@@ -1,6 +1,6 @@
 #include "CLIParser.hpp"
 #include <iostream>
-#include <string.h>
+#include <string>
 
 static void printIndentation(const std::string& indentString, const size_t count) noexcept
 {
@@ -30,7 +30,7 @@ static void printDefaultValues(char** values, const size_t count, const UCLI::Co
     }
 }
 
-void UCLI::Parser::printFlags(UCLI::Flag* flags, const size_t size, const std::string& indentationString, const size_t indentation) noexcept
+void UCLI::Parser::printFlags(const UCLI::Flag* flags, const size_t size, const std::string& indentationString, const size_t indentation) noexcept
 {
     printIndentation(indentationString, indentation);
     std::cout << "Flags:" << std::endl;
@@ -97,9 +97,19 @@ void UCLI::Parser::printCommands(const UCLI::Command* commands, const size_t siz
     std::cout << std::endl;
 }
 
-void UCLI::Parser::helpCommand(const Flag* command) noexcept
+UCLI_CallbackResult UCLI_Parser_helpCommandF(const UCLI_Flag* flag)
 {
-    auto& p = *static_cast<Parser*>(command->context);
+    return UCLI::Parser::helpCommand(flag);
+}
+
+UCLI_CallbackResult UCLI_Parser_helpCommandC(const UCLI_Command* command)
+{
+    return UCLI::Parser::helpCommand(command);
+}
+
+UCLI::CallbackResult UCLI::Parser::helpCommand(const Flag* command) noexcept
+{
+    const auto& p = *static_cast<Parser*>(command->context);
     if (!p.helpHeader.empty())
         std::cout << p.helpHeader << std::endl;
 
@@ -108,26 +118,44 @@ void UCLI::Parser::helpCommand(const Flag* command) noexcept
 
     if (!p.helpFooter.empty())
         std::cout << p.helpFooter << std::endl;
+
+    return UCLI_CALLBACK_RESULT_PREMATURE_EXIT;
 }
 
-void UCLI::Parser::helpCommand(const Command* command) noexcept
+UCLI::CallbackResult UCLI::Parser::helpCommand(const Command* command) noexcept
 {
-    auto& p = *static_cast<Parser*>(command->context);
+    const auto& p = *static_cast<Parser*>(command->context);
+
     if (!p.helpHeader.empty())
         std::cout << p.helpHeader << std::endl;
 
-    printCommands(p.commands.data(), p.commands.size(), p.indentationString, 0);
-    printFlags(p.flags.data(), p.flags.size(), p.indentationString, 0);
+    if (command->_internal_parent == nullptr)
+    {
+        printCommands(p.commands.data(), p.commands.size(), p.indentationString, 0);
+        printFlags(p.flags.data(), p.flags.size(), p.indentationString, 0);
+    }
+    else
+    {
+        printCommands(command->subcommands, command->subcommandsCount, p.indentationString, 0);
+        printFlags(command->flags, command->flagsCount, p.indentationString, 0);
+    }
 
     if (!p.helpFooter.empty())
         std::cout << p.helpFooter << std::endl;
+
+    return UCLI_CALLBACK_RESULT_PREMATURE_EXIT;
 }
+
+
 
 void UCLI::Parser::pushHelp() noexcept
 {
     std::string header = helpHeader;
 
-    pushCommand(Command{
+    static Command helpCmd{};
+    static Flag helpFlag{};
+
+    helpCmd = Command{
         .longName = "help",
         .shortName = 'h',
         .description = "Prints a help message",
@@ -137,9 +165,9 @@ void UCLI::Parser::pushHelp() noexcept
 
         .callback = helpCommand,
         .context = this,
-    });
+    };
 
-    pushFlag(Flag{
+    helpFlag = Flag{
         .longName = "help",
         .shortName = 'h',
         .description = "Prints a help message",
@@ -149,11 +177,34 @@ void UCLI::Parser::pushHelp() noexcept
 
         .callback = helpCommand,
         .context = this,
-    });
+
+        .priority = SIZE_MAX
+    };
+
+    pushCommand(helpCmd);
+    pushFlag(helpFlag);
+
+
     if (defaultCommand == nullptr)
-        defaultCommand = &commands.back();
+    {
+        helpCmd.callback = [](const Command* command) -> CallbackResult
+        {
+            if (command->_internal_ctx_ != nullptr)
+                std::cout << "Unrecognised command: " << command->_internal_ctx_ << std::endl << std::endl;
+            return helpCommand(command);
+        };
+        defaultCommand = &helpCmd;
+    }
     if (defaultFlag == nullptr)
-        defaultFlag = &flags.back();
+    {
+        helpFlag.callback = [](const Flag* command) -> CallbackResult
+        {
+            if (command->_internal_ctx_ != nullptr)
+                std::cout << "Unrecognised flag: " << command->_internal_ctx_ << std::endl << std::endl;
+            return helpCommand(command);
+        };
+        defaultFlag = &helpFlag;
+    }
 }
 
 UCLI::Parser& UCLI::Parser::setHelpHeader(const char* header) noexcept

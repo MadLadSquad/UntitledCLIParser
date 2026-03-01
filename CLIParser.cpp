@@ -1,4 +1,3 @@
-#include <cstring>
 #include "CLIParser.hpp"
 #include <span>
 #include <iostream>
@@ -100,4 +99,18 @@ UCLI::Parser& UCLI::Parser::release() noexcept
 UCLI::Parser::~Parser() noexcept
 {
     release();
+}
+
+UCLI_CallbackResult UCLI_EMPTY_FLAG_CALLBACK(const UCLI_Flag*f)
+{
+    std::cout << f->longName << std::endl;
+    std::cout << f->description << std::endl;
+    return UCLI_CALLBACK_RESULT_OK;
+}
+
+UCLI_CallbackResult UCLI_EMPTY_COMMAND_CALLBACK(const UCLI_Command*f)
+{
+    std::cout << f->longName << std::endl;
+    std::cout << f->description << std::endl;
+    return UCLI_CALLBACK_RESULT_OK;
 }
