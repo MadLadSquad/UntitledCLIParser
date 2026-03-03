@@ -1,4 +1,5 @@
 #pragma once
+
 // Cast a const T* of anything to void* for use with standard library functions
 #define UCLI_VOID_CAST(x)                       \
     static_cast<void*>(                         \

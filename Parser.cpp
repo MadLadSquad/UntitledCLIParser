@@ -142,7 +142,7 @@ UCLI::Parser& UCLI::Parser::parse(const int argc, char** argv) noexcept
                 ;
 
             // Sort flags in descending order based on their priority
-            std::ranges::sort(
+            std::ranges::stable_sort(
                 callbacks.begin(),
                 callbacks.begin() + static_cast<std::remove_cvref_t<decltype(callbacks)>::difference_type>(f),
                 [](const CallbackObject& x, const CallbackObject& y) -> bool

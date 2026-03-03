@@ -1,6 +1,7 @@
 #pragma once
 #include "FlagParser.hpp"
 #include "ParserUtils.hpp"
+#include <iostream>
 
 /**
  * This is a parser for arguments of type UCLI_COMMAND_TYPE_STRING. The syntax is as follows:
@@ -37,21 +38,28 @@ static bool loadStringCommand(int& i, const int argc, char** argv, T& command, c
         // Owned by us
         command.stringValues._internal_._bFreeStringValues = true;
         command.stringValues._internal_._bFreeInnerStringValues = true;
+
+        return true;
     }
-    else
+
+    // String value from the next argument
+    if (!bForcedDefault && argc > (i + 1))
     {
-        // Owned by the user
-        if (!bForcedDefault && argc > (i + 1) && argv[i + 1][0] != flagPrefix)
+        if (argv[i + 1][0] != flagPrefix || (argv[i + 1][0] == flagPrefix && command.useLiteralFlags))
         {
             i++; // Skip to the next argument
 
             command.stringValues.stringValues = const_cast<const char**>(argv + i);
             command.stringValues.stringValuesCount = 1;
 
+            // Owned by the user
             command.stringValues._internal_._bFreeStringValues = false;
             command.stringValues._internal_._bFreeInnerStringValues = false;
+
+            return true;
         }
-        else if (!bForcedDefault && argc > (i + 1) && argv[i + 1][0] == flagPrefix && std::is_same_v<T, UCLI::Command>)
+
+        if (argv[i + 1][0] == flagPrefix && std::is_same_v<T, UCLI::Command>)
         {
             // Special case: we have encountered a situation like this: `git clone --recursive https://...`
             // where we're at `clone`.
@@ -67,13 +75,12 @@ static bool loadStringCommand(int& i, const int argc, char** argv, T& command, c
 
             return result;
         }
-        else
-        {
-            if (command.defaultValues != nullptr && command.defaultValuesCount > 0)
-                useDefaultArguments(command);
-            else
-                useNullArguments(command);
-        }
     }
+
+    if (command.defaultValues != nullptr && command.defaultValuesCount > 0)
+        useDefaultArguments(command);
+    else
+        useNullArguments(command);
+
     return true;
 }

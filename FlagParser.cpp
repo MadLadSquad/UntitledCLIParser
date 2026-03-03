@@ -23,15 +23,18 @@ int64_t UCLI::Parser::getAssignmentIndex(const char* str) noexcept
 
 bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, const int64_t assignmentIndex, const int64_t depth, const Command* command, const std::string& cleanName) noexcept
 {
-    for (size_t j = 0; j < command->flagsCount; j++)
+    Flag* array = command == nullptr ? flags.data() : command->flags;
+    const size_t count = command == nullptr ? flags.size() : command->flagsCount;
+
+    for (size_t j = 0; j < count; j++)
     {
-        if (cleanName == command->flags[j].longName)
+        if (cleanName == array[j].longName)
         {
             executeCommand(
                 i,
                 argc,
                 argv,
-                command->flags[j],
+                array[j],
                 assignmentIndex,
                 arrayDelimiter,
                 bToggleBooleans,
@@ -45,7 +48,7 @@ bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, const
         }
     }
 
-    if (command->_internal_parent != nullptr)
+    if (command != nullptr && command->_internal_parent != nullptr)
         return findFlagsRecursive(i, argc, argv, assignmentIndex, depth + 1, command->_internal_parent, cleanName);
     return false;
 }

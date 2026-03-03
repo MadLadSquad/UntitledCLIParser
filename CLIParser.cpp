@@ -114,7 +114,7 @@ UCLI_CallbackResult UCLI_EMPTY_FLAG_CALLBACK(const UCLI_Flag* flag)
     std::cout << flag->longName << std::endl;
     std::cout << flag->description << std::endl;
 
-    if (flag->type == UCLI_COMMAND_TYPE_ARRAY || flag->type == UCLI_COMMAND_TYPE_STRING)
+    if ((flag->type == UCLI_COMMAND_TYPE_ARRAY || flag->type == UCLI_COMMAND_TYPE_STRING) && flag->stringValues.stringValues != nullptr && flag->stringValues.stringValuesCount != 0)
     {
         std::cout << "Result: ";
         for (size_t i = 0; i < flag->stringValues.stringValuesCount; i++)
@@ -131,7 +131,7 @@ UCLI_CallbackResult UCLI_EMPTY_COMMAND_CALLBACK(const UCLI_Command* flag)
     std::cout << flag->longName << std::endl;
     std::cout << flag->description << std::endl;
 
-    if (flag->type == UCLI_COMMAND_TYPE_ARRAY || flag->type == UCLI_COMMAND_TYPE_STRING)
+    if ((flag->type == UCLI_COMMAND_TYPE_ARRAY || flag->type == UCLI_COMMAND_TYPE_STRING) && flag->stringValues.stringValues != nullptr && flag->stringValues.stringValuesCount != 0)
     {
         std::cout << "Result: ";
         for (size_t i = 0; i < flag->stringValues.stringValuesCount; i++)

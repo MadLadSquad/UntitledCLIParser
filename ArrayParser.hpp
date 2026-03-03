@@ -1,6 +1,7 @@
 #pragma once
 #include "FlagParser.hpp"
 #include "ParserUtils.hpp"
+#include <iostream>
 
 /**
  * This is a parser for arguments of type UCLI_COMMAND_TYPE_ARRAY. The syntax is as follows:
@@ -28,12 +29,13 @@ static bool loadArrayCommand(int& i, const int argc, char** argv, T& command, co
     if (assignmentIndex >= 0)
     {
         size_t startIndex = assignmentIndex + 1;
+
         // Loop until null terminator but in a more code-efficient way
         for (size_t j = startIndex; true; j++)
         {
             if (argv[i][j] == arrayDelimiter || argv[i][j] == '\0')
             {
-                const size_t size = (j - startIndex) * sizeof(char);
+                const size_t size = (j - startIndex + 1) * sizeof(char);
                 if (size <= 1)
                     break;
 
@@ -74,6 +76,13 @@ static bool loadArrayCommand(int& i, const int argc, char** argv, T& command, co
         command.stringValues._internal_._bFreeStringValues = true;
         command.stringValues._internal_._bFreeInnerStringValues = true;
 
+        return true;
+    }
+
+    // Nothing after the command
+    if (argc == (i + 1))
+    {
+        useDefaultArguments(command);
         return true;
     }
 

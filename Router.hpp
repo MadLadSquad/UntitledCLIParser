@@ -17,6 +17,8 @@ static void pushCallback(T& command, const int64_t commandDepth, std::deque<UCLI
             callbacks.emplace_front(&command, false);
         else
         {
+            bool bPushed = false;
+
             // Iterate call callbacks and count up until we hit commandDepth.
             for (size_t a = 0, b = 0; a < callbacks.size(); a++)
             {
@@ -27,6 +29,8 @@ static void pushCallback(T& command, const int64_t commandDepth, std::deque<UCLI
                 // We're in a command, and we found the command at our required depth
                 if (b == commandDepth)
                 {
+                    bPushed = true;
+
                     // Insert just after the current command
                     callbacks.insert(
                         callbacks.begin() + static_cast<std::remove_cvref_t<decltype(callbacks)>::difference_type>(a + 1),
@@ -42,7 +46,7 @@ static void pushCallback(T& command, const int64_t commandDepth, std::deque<UCLI
                         ;
 
                     // Sort flags in descending order based on their priority
-                    std::ranges::sort(
+                    std::ranges::stable_sort(
                         callbacks.begin() + static_cast<std::remove_cvref_t<decltype(callbacks)>::difference_type>(a + 1),
                         callbacks.begin() + static_cast<std::remove_cvref_t<decltype(callbacks)>::difference_type>(f),
                         [](const UCLI::Parser::CallbackObject& x, const UCLI::Parser::CallbackObject& y) -> bool
@@ -55,6 +59,11 @@ static void pushCallback(T& command, const int64_t commandDepth, std::deque<UCLI
 
                 b++;
             }
+
+            // If we never found and associated command for a flag this likely means that we don't have a current
+            // command to begin with so just push
+            if (!bPushed)
+                callbacks.emplace_back(&command, false);
         }
     }
     else
