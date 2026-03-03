@@ -37,7 +37,7 @@ extern "C"
     // Initialise a pointer with an array inline
     #define UCLI_MAKE_COMMAND_ARRAY(...) CLITERAL(UCLI_Command, __VA_ARGS__)
     // Initialise a pointer with an array inline
-    #define UCLI_MAKE_STRING_ARRAY(...) CLITERAL(char*, __VA_ARGS__)
+    #define UCLI_MAKE_STRING_ARRAY(...) CLITERAL(const char*, __VA_ARGS__)
 
 
     typedef enum UCLI_CommandType
@@ -77,6 +77,10 @@ extern "C"
      * @var callback - A callback that will be called if the flag is encountered
      * @var context - A user-defined context pointer
      *
+     * @var useLiteralFlags - If the flag is of type UCLI_COMMAND_TYPE_ARRAY, determines whether we interpret flags in
+     * an array element sequence(--flag a b c d) literally as array members, or as a terminator. By default, you should
+     * be terminating. This is useful for applications that pass arguments to other applications verbatim
+     *
      * @var priority - If the flag's priority is below (SIZE_MAX / 2), then the flag is pushed before any other flags
      * with a lower priority for the flag's command depth. If the priority is higher, the flag is moved to the front of
      * the command queue. SIZE_MAX is the highest priority. These commands are guaranteed to be called first, with the
@@ -88,14 +92,14 @@ extern "C"
         char shortName;
         const char* description;
 
-        char** defaultValues;
+        const char** defaultValues;
         size_t defaultValuesCount;
 
         union
         {
             struct
             {
-                char** stringValues;
+                const char** stringValues;
                 size_t stringValuesCount;
 
                 struct
@@ -110,6 +114,8 @@ extern "C"
 
         UCLI_FlagEvent callback;
         void* context;
+
+        bool useLiteralFlags;
 
         size_t priority;
 
@@ -132,6 +138,10 @@ extern "C"
       *
       * @var callback - A callback that will be called if the command is encountered
       * @var context - A user-defined context pointer
+      *
+      * @var useLiteralFlags - If the flag is of type UCLI_COMMAND_TYPE_ARRAY, determines whether we interpret flags in
+      * an array element sequence(--flag a b c d) literally as array members, or as a terminator. By default, you should
+      * be terminating. This is useful for applications that pass arguments to other applications verbatim
       */
     typedef struct MLS_PUBLIC_API UCLI_Command
     {
@@ -139,14 +149,14 @@ extern "C"
         char shortName;
         const char* description;
 
-        char** defaultValues;
+        const char** defaultValues;
         size_t defaultValuesCount;
 
         union
         {
             struct
             {
-                char** stringValues;
+                const char** stringValues;
                 size_t stringValuesCount;
                 struct
                 {
@@ -166,6 +176,8 @@ extern "C"
 
         UCLI_CommandEvent callback;
         void* context;
+
+        bool useLiteralFlags;
 
         UCLI_Command* _internal_parent;
         char* _internal_ctx_;

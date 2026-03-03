@@ -8,7 +8,7 @@ static void printIndentation(const std::string& indentString, const size_t count
         std::cout << indentString;
 }
 
-static void printDefaultValues(char** values, const size_t count, const UCLI::CommandType type) noexcept
+static void printDefaultValues(const char** values, const size_t count, const UCLI::CommandType type) noexcept
 {
     if (values != nullptr && count > 0)
     {

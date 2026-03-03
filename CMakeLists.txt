@@ -13,7 +13,7 @@ if (BUILD_VARIANT_STATIC)
 endif()
 
 set(UCLI_C_HEADERS "C/cucli.h")
-set(UCLI_HEADERS "Common.h" "CLIParser.hpp" "ArrayParser.hpp" "BooleanParser.hpp" "Router.hpp")
+set(UCLI_HEADERS "Common.h" "CLIParser.hpp" "ArrayParser.hpp" "BooleanParser.hpp" "Router.hpp" "ParserUtils.hpp")
 
 add_library(UntitledCLIParser ${UCLI_LIBRARY_TYPE} C/cucli.cpp CLIParser.cpp Parser.cpp Help.cpp FlagParser.cpp
         ${UCLI_HEADERS} ${UCLI_C_HEADERS}

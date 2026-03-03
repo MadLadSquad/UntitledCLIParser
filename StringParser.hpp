@@ -1,4 +1,6 @@
 #pragma once
+#include "FlagParser.hpp"
+#include "ParserUtils.hpp"
 
 /**
  * This is a parser for arguments of type UCLI_COMMAND_TYPE_STRING. The syntax is as follows:
@@ -13,7 +15,7 @@
  *    in the shape of `git clone --recursive --depth 1 https://...` where we parse the flags until we find the value.
  */
 template<typename T>
-static void loadStringCommand(int& i, const int argc, char** argv, T& command, const int64_t assignmentIndex, const bool bForcedDefault, const char flagPrefix) noexcept
+static bool loadStringCommand(int& i, const int argc, char** argv, T& command, const int64_t assignmentIndex, const bool bForcedDefault, const char flagPrefix, UCLI::Parser& p) noexcept
 {
     if (assignmentIndex >= 0)
     {
@@ -21,19 +23,14 @@ static void loadStringCommand(int& i, const int argc, char** argv, T& command, c
 
         if (str.empty())
         {
-            command.stringValues.stringValues = nullptr;
-            command.stringValues.stringValuesCount = 0;
-
-            command.stringValues._internal_._bFreeStringValues = false;
-            command.stringValues._internal_._bFreeInnerStringValues = false;
-
-            return;
+            useNullArguments(command);
+            return true;
         }
 
-        command.stringValues.stringValues = static_cast<char**>(malloc(sizeof(char**)));
-        command.stringValues.stringValues[0] = static_cast<char*>(malloc(str.size() * sizeof(char)));
+        command.stringValues.stringValues = static_cast<const char**>(malloc(sizeof(char**)));
+        command.stringValues.stringValues[0] = static_cast<const char*>(malloc(str.size() * sizeof(char)));
 
-        memcpy(command.stringValues.stringValues[0], str.data(), str.size() * sizeof(char));
+        memcpy(UCLI_VOID_CAST(command.stringValues.stringValues[0]), str.data(), str.size() * sizeof(char));
 
         command.stringValues.stringValuesCount = 1;
 
@@ -48,8 +45,11 @@ static void loadStringCommand(int& i, const int argc, char** argv, T& command, c
         {
             i++; // Skip to the next argument
 
-            command.stringValues.stringValues = argv + i;
+            command.stringValues.stringValues = const_cast<const char**>(argv + i);
             command.stringValues.stringValuesCount = 1;
+
+            command.stringValues._internal_._bFreeStringValues = false;
+            command.stringValues._internal_._bFreeInnerStringValues = false;
         }
         else if (!bForcedDefault && argc > (i + 1) && argv[i + 1][0] == flagPrefix && std::is_same_v<T, UCLI::Command>)
         {
@@ -62,23 +62,18 @@ static void loadStringCommand(int& i, const int argc, char** argv, T& command, c
             //
             // For example: `git clone --recursive --depth=1 --depth 2 https://...` will be interpreted as if
             // recursive = true, depth = 1, depth = 2, clone="https://..."
-            // TODO:
+            auto result = UCLI::Internal::probeFlags(i, argc, argv, p);
+
+
+            return result;
         }
         else
         {
             if (command.defaultValues != nullptr && command.defaultValuesCount > 0)
-            {
-                command.stringValues.stringValues = command.defaultValues;
-                command.stringValues.stringValuesCount = command.defaultValuesCount;
-            }
+                useDefaultArguments(command);
             else
-            {
-                command.stringValues.stringValues = nullptr;
-                command.stringValues.stringValuesCount = 0;
-            }
+                useNullArguments(command);
         }
-
-        command.stringValues._internal_._bFreeStringValues = false;
-        command.stringValues._internal_._bFreeInnerStringValues = false;
     }
+    return true;
 }

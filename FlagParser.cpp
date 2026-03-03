@@ -1,5 +1,6 @@
 #include "CLIParser.hpp"
 #include "Router.hpp"
+#include "FlagParser.hpp"
 
 int64_t UCLI::Parser::getAssignmentIndex(const char* str) noexcept
 {
@@ -37,7 +38,8 @@ bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, const
                 flagPrefix,
                 false,
                 depth,
-                callbacks
+                callbacks,
+                *this
             );
             return true;
         }
@@ -65,7 +67,8 @@ bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, const
                 flagPrefix,
                 bBatched,
                 depth,
-                callbacks
+                callbacks,
+                *this
             );
             return true;
         }
@@ -74,4 +77,100 @@ bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, const
     if (command->_internal_parent != nullptr)
         return findFlagsRecursive(i, argc, argv, depth + 1, command->_internal_parent, shortName, bBatched);
     return false;
+}
+
+// Returns 0 on success, 1 when skipping -- or - and 2 when skipping arguments because we hit the default
+int UCLI::Internal::parseFlag(int& i, const int argc, char** argv, UCLI::Parser& p) noexcept
+{
+    const char* current = argv[i];
+
+    // Skip -- and -
+    if (current[1] == '\0' || (current[1] == p.flagPrefix && current[2] == '\0'))
+        return 1;
+
+    // --flag
+    if (current[1] == p.flagPrefix)
+    {
+        // Clean up the command name so that we can search for the command
+        std::string cleanName = current + 2;
+        int64_t assignmentIndex = UCLI::Parser::getAssignmentIndex(cleanName.c_str());
+        if (assignmentIndex != -1)
+        {
+            cleanName.erase(assignmentIndex);
+            assignmentIndex += 2; // + 2 to account for removing the --
+        }
+
+        if (!p.findFlagsRecursive(i, argc, argv, assignmentIndex, 0, p.currentCommand, cleanName))
+        {
+            if (p.defaultFlag != nullptr)
+            {
+                // For diagnostic commands like --help
+                p.defaultFlag->_internal_ctx_ = argv[i];
+                // Do not run executeCommand, since it contains additional parsing logic. Default commands should not
+                // take advantage of features such as default arguments and values
+                pushCallback(*p.defaultFlag, 0, p.callbacks);
+            }
+            return p.bStrictMode ? 2 : 0;
+        }
+    }
+    else // -f or -fF
+    {
+        for (size_t f = 1; current[f] != '\0'; f++)
+        {
+            if (
+                !p.findFlagsRecursive(
+                    i,
+                    argc,
+                    argv,
+                    0,
+                    p.currentCommand,
+                    current[f],
+                    f > 1 || (f == 1 && current[f + 1] != '\0')
+                )
+            )
+            {
+                if (p.defaultFlag != nullptr)
+                {
+                    // For diagnostic commands like --help
+                    p.defaultFlag->_internal_ctx_ = argv[i];
+                    // Do not run executeCommand, since it contains additional parsing logic. Default commands should not
+                    // take advantage of features such as default arguments and values
+                    pushCallback(*p.defaultFlag, 0, p.callbacks);
+                }
+                return p.bStrictMode ? 2 : 0;
+            }
+        }
+    }
+    return 0;
+}
+
+bool UCLI::Internal::probeFlags(int& i, const int argc, char** argv, UCLI::Parser& p) noexcept
+{
+    for (; i < argc; i++)
+    {
+        // Is a flag
+        if (argv[i][0] == p.flagPrefix)
+        {
+            auto result = parseFlag(i, argc, argv, p);
+
+            switch (result)
+            {
+            // Unrecognized argument. We return false so that we can skip adding the current command to the
+            case 2:
+                return false;
+
+            // When we hit -- or -. Move the iterator forward to the next argument so we can deal with anything else
+            case 1:
+                i++;
+                return true;
+            case 0:
+                break;
+            default:
+                break;
+            }
+        }
+        else
+            break;
+    }
+    return true;
 }

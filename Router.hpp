@@ -64,14 +64,18 @@ static void pushCallback(T& command, const int64_t commandDepth, std::deque<UCLI
 // This function routes the actual parsing of arguments and handling of syntax features to the command's corresponding
 // parser
 template<typename T>
-static void executeCommand(int& i, const int argc, char** argv, T& command, const int64_t assignmentIndex, const char arrayDelimiter, const bool bToggle, const char flagPrefix, const bool bForcedDefault, const int64_t commandDepth, std::deque<UCLI::Parser::CallbackObject>& callbacks) noexcept
+static void executeCommand(int& i, const int argc, char** argv, T& command, const int64_t assignmentIndex, const char arrayDelimiter, const bool bToggle, const char flagPrefix, const bool bForcedDefault, const int64_t commandDepth, std::deque<UCLI::Parser::CallbackObject>& callbacks, UCLI::Parser& p) noexcept
 {
     if (command.type == UCLI_COMMAND_TYPE_BOOL)
         loadBooleanCommand(i, argc, argv, command, assignmentIndex, bToggle, flagPrefix, bForcedDefault);
     else if (command.type == UCLI_COMMAND_TYPE_STRING)
-        loadStringCommand(i, argc, argv, command, assignmentIndex, bForcedDefault, flagPrefix);
+    {
+        if (!loadStringCommand(i, argc, argv, command, assignmentIndex, bForcedDefault, flagPrefix, p))
+            return;
+    }
     else if (command.type == UCLI_COMMAND_TYPE_ARRAY)
-        loadArrayCommand(i, argc, argv, command, assignmentIndex, arrayDelimiter, flagPrefix, bForcedDefault);
+        if (!loadArrayCommand(i, argc, argv, command, assignmentIndex, arrayDelimiter, flagPrefix, bForcedDefault, p))
+            return;
 
     pushCallback(command, commandDepth, callbacks);
 }

@@ -1,10 +1,17 @@
 #include "CLIParser.hpp"
 #include <span>
 #include <iostream>
+#include "ParserUtils.hpp"
 
 UCLI::Parser& UCLI::Parser::setArrayDelimiter(const char delimiter) noexcept
 {
     arrayDelimiter = delimiter;
+    return *this;
+}
+
+UCLI::Parser& UCLI::Parser::useLenientMode(const bool bUseLenientMode) noexcept
+{
+    bStrictMode = !bUseLenientMode;
     return *this;
 }
 
@@ -52,7 +59,7 @@ void UCLI::Parser::freeCommands(Command& command) noexcept
     {
         if (command.stringValues._internal_._bFreeInnerStringValues)
             for (size_t i = 0; i < command.stringValues.stringValuesCount; i++)
-                free(command.stringValues.stringValues[i]);
+                free(UCLI_VOID_CAST(command.stringValues.stringValues[i]));
         if (command.stringValues._internal_._bFreeStringValues)
             free(command.stringValues.stringValues);
         memset(&command.stringValues, 0, sizeof(command.stringValues));
@@ -76,7 +83,7 @@ void UCLI::Parser::freeFlags(Flag& command) noexcept
     {
         if (command.stringValues._internal_._bFreeInnerStringValues)
             for (size_t i = 0; i < command.stringValues.stringValuesCount; i++)
-                free(command.stringValues.stringValues[i]);
+                free(UCLI_VOID_CAST(command.stringValues.stringValues[i]));
         if (command.stringValues._internal_._bFreeStringValues)
             free(command.stringValues.stringValues);
         memset(&command.stringValues, 0, sizeof(command.stringValues));

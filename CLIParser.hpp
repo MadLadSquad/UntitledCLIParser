@@ -2,6 +2,7 @@
 #include <vector>
 #include <deque>
 #include "Common.h"
+#include "FlagParser.hpp"
 
 namespace UCLI
 {
@@ -26,6 +27,10 @@ namespace UCLI
         Parser& setFlagPrefix(char prefix) noexcept;
         // The default is `,`
         Parser& setArrayDelimiter(char delimiter) noexcept;
+
+        // By default, we use strict mode, where the default argument/command is called and directly exits. Lenient mode
+        // replaces calls to invalid commands/flags with the default argument/flag command instead.
+        Parser& useLenientMode(bool bUseLenientMode) noexcept;
 
         // Whether to toggle boolean arguments or to set them to true. The default behaviour is to set them to true
         Parser& setBoolToggle(bool bToggle) noexcept;
@@ -54,6 +59,8 @@ namespace UCLI
         bool bUseHelp = true;
         bool bShowHelp = false;
 
+        bool bStrictMode = true;
+
         std::vector<Command> commands{};
         std::vector<Flag> flags{};
 
@@ -74,6 +81,9 @@ namespace UCLI
 
         static void freeCommands(Command& command) noexcept;
         static void freeFlags(Flag& command) noexcept;
+
+        friend int UCLI::Internal::parseFlag(int& i, int argc, char** argv, Parser& p) noexcept;
+        friend bool UCLI::Internal::probeFlags(int& i, int argc, char** argv, Parser& p) noexcept;
 
     public:
         struct CallbackObject

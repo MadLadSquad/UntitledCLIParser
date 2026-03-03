@@ -23,24 +23,13 @@ UCLI::Parser& UCLI::Parser::parse(const int argc, char** argv) noexcept
     if (argc <= 1)
     {
         if (defaultCommand == nullptr)
-            return *this;
-        int tmp = 0;
-        executeCommand(
-            tmp,
-            argc,
-            argv,
-            *defaultCommand,
-            -1,
-            arrayDelimiter,
-            bToggleBooleans,
-            flagPrefix,
-            false,
-            0,
-            callbacks
-        );
+            goto finish_parse;
+        defaultCommand->callback(defaultCommand);
     }
     else
     {
+        bool bHitDefault = false;
+
         for (int i = 1; i < argc; i++)
         {
             const char* current = argv[i];
@@ -50,51 +39,10 @@ UCLI::Parser& UCLI::Parser::parse(const int argc, char** argv) noexcept
             // Flags
             if (current[0] == flagPrefix)
             {
-                // Skip -- and -
-                if (current[1] == '\0' || (current[1] == flagPrefix && current[2] == '\0'))
-                    continue;
-
-                // --flag
-                if (current[1] == flagPrefix)
+                if (Internal::parseFlag(i, argc, argv, *this) == 2)
                 {
-                    // Clean up the command name so that we can search for the command
-                    std::string cleanName = current + 2;
-                    int64_t assignmentIndex = getAssignmentIndex(cleanName.c_str());
-                    if (assignmentIndex != -1)
-                    {
-                        cleanName.erase(assignmentIndex);
-                        assignmentIndex += 2; // + 2 to account for removing the --
-                    }
-
-                    if (!findFlagsRecursive(i, argc, argv, assignmentIndex, 0, currentCommand, cleanName) && defaultFlag != nullptr)
-                    {
-                        defaultFlag->_internal_ctx_ = argv[i];
-                        executeCommand(i, argc, argv, *defaultFlag, -1, arrayDelimiter, bToggleBooleans, flagPrefix, false, 0, callbacks);
-                        goto default_skip;
-                    }
-                }
-                else
-                {
-                    for (size_t f = 1; current[f] != '\0'; f++)
-                    {
-                        if (
-                            !findFlagsRecursive(
-                                i,
-                                argc,
-                                argv,
-                                0,
-                                currentCommand,
-                                current[f],
-                                f > 1 || (f == 1 && current[f + 1] != '\0')
-                            )
-                            && defaultFlag != nullptr
-                        )
-                        {
-                            defaultFlag->_internal_ctx_ = argv[i];
-                            executeCommand(i, argc, argv, *defaultFlag, -1, arrayDelimiter, bToggleBooleans, flagPrefix, false, 0, callbacks);
-                            goto default_skip;
-                        }
-                    }
+                    bHitDefault = true;
+                    break;
                 }
             }
             else
@@ -127,57 +75,103 @@ UCLI::Parser& UCLI::Parser::parse(const int argc, char** argv) noexcept
                     if (cleanName == currentCommandsArray[f].longName || (cleanName.length() == 1 && cleanName[0] == currentCommandsArray[f].shortName))
                     {
                         bFound = true;
-                        executeCommand(i, argc, argv, currentCommandsArray[f], assignmentIndex, arrayDelimiter, bToggleBooleans, flagPrefix, false, 0, callbacks);
 
                         currentCommandsArray[f]._internal_parent = currentCommand;
                         currentCommand = &currentCommandsArray[f];
+
+                        executeCommand(
+                            i,
+                            argc,
+                            argv,
+                            currentCommandsArray[f],
+                            assignmentIndex,
+                            arrayDelimiter,
+                            bToggleBooleans,
+                            flagPrefix,
+                            false,
+                            0,
+                            callbacks,
+                            *this
+                        );
                         break;
                     }
                 }
 
-                if (!bFound && defaultCommand != nullptr)
+                if (!bFound)
                 {
-                    defaultCommand->_internal_ctx_ = argv[i];
-                    executeCommand(i, argc, argv, *defaultCommand, -1, arrayDelimiter, bToggleBooleans, flagPrefix, false, 0, callbacks);
-                    goto default_skip;
+                    if (defaultCommand != nullptr)
+                    {
+                        // This is for diagnostic commands like --help
+                        defaultCommand->_internal_ctx_ = argv[i];
+                        // Do not run executeCommand, since it contains additional parsing logic. Default commands
+                        // should not take advantage of features such as default arguments and values
+                        pushCallback(*defaultCommand, 0, callbacks);
+                    }
+
+                    // In lenient mode we just add the default and continue forward
+                    if (bStrictMode)
+                    {
+                        bHitDefault = true;
+                        break;
+                    }
                 }
             }
         }
-default_skip:
 
-        // Find the length of the flag sequence until the next command
-        size_t f = 0;
-        for (; f < callbacks.size() && !callbacks[f].bCommand; f++)
-            ;
-
-        // Sort flags in descending order based on their priority
-        std::ranges::sort(
-            callbacks.begin(),
-            callbacks.begin() + static_cast<std::remove_cvref_t<decltype(callbacks)>::difference_type>(f),
-            [](const CallbackObject& x, const CallbackObject& y) -> bool
-            {
-                return static_cast<Flag*>(x.ptr)->priority > static_cast<Flag*>(y.ptr)->priority;
-            }
-        );
-
-        for (const auto& a : callbacks)
+        // In lenient mode we simply run everything
+        if (bHitDefault && bStrictMode)
         {
-            if (a.bCommand)
+            // In strict mode we only run the default command
+            const auto& last = callbacks.back();
+            if (last.bCommand && defaultCommand != nullptr)
             {
-                auto* command = static_cast<Command*>(a.ptr);
-                if (command->callback(command) == UCLI_CALLBACK_RESULT_PREMATURE_EXIT)
-                    break;
+                const auto* ptr = static_cast<Command*>(last.ptr);
+                ptr->callback(ptr);
             }
-            else
+            else if (defaultFlag != nullptr)
             {
-                auto* flag = static_cast<Flag*>(a.ptr);
-                if (flag->callback(flag) == UCLI_CALLBACK_RESULT_PREMATURE_EXIT)
-                    break;
+                const auto* ptr = static_cast<Flag*>(last.ptr);
+                ptr->callback(ptr);
             }
         }
+        else
+        {
+            // Find the length of the flag sequence until the next command
+            size_t f = 0;
+            for (; f < callbacks.size() && !callbacks[f].bCommand; f++)
+                ;
+
+            // Sort flags in descending order based on their priority
+            std::ranges::sort(
+                callbacks.begin(),
+                callbacks.begin() + static_cast<std::remove_cvref_t<decltype(callbacks)>::difference_type>(f),
+                [](const CallbackObject& x, const CallbackObject& y) -> bool
+                {
+                    return static_cast<Flag*>(x.ptr)->priority > static_cast<Flag*>(y.ptr)->priority;
+                }
+            );
+
+            for (const auto& a : callbacks)
+            {
+                if (a.bCommand)
+                {
+                    const auto* command = static_cast<Command*>(a.ptr);
+                    if (command->callback(command) == UCLI_CALLBACK_RESULT_PREMATURE_EXIT)
+                        break;
+                }
+                else
+                {
+                    const auto* flag = static_cast<Flag*>(a.ptr);
+                    if (flag->callback(flag) == UCLI_CALLBACK_RESULT_PREMATURE_EXIT)
+                        break;
+                }
+            }
+        }
+
         callbacks.clear();
     }
 
+finish_parse:
     bShowHelp = false;
     return *this;
 }

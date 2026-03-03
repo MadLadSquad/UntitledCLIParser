@@ -1,4 +1,6 @@
 #pragma once
+#include "FlagParser.hpp"
+#include "ParserUtils.hpp"
 
 /**
  * This is a parser for arguments of type UCLI_COMMAND_TYPE_ARRAY. The syntax is as follows:
@@ -16,8 +18,10 @@
  *    we find the values.
  */
 template<typename T>
-static void loadArrayCommand(int& i, const int argc, char** argv, T& command, const int64_t assignmentIndex, const char arrayDelimiter, const char flagPrefix, const bool bForcedDefault) noexcept
+static bool loadArrayCommand(int& i, const int argc, char** argv, T& command, const int64_t assignmentIndex, const char arrayDelimiter, const char flagPrefix, const bool bForcedDefault, UCLI::Parser& p) noexcept
 {
+    bool returnValue = true;
+
     std::vector<char*> stringValues{};
 
     // Is a variable assignment --flag=value
@@ -52,21 +56,16 @@ static void loadArrayCommand(int& i, const int argc, char** argv, T& command, co
         // Default values
         if (stringValues.empty())
         {
-            command.stringValues.stringValues = command.defaultValues;
-            command.stringValues.stringValuesCount = command.defaultValuesCount;
-
-            // Owned by the user
-            command.stringValues._internal_._bFreeStringValues = false;
-            command.stringValues._internal_._bFreeInnerStringValues = false;
-            return;
+            useDefaultArguments(command);
+            return true;
         }
 
-        command.stringValues.stringValues = static_cast<char**>(malloc(stringValues.size() * sizeof(char*)));
+        command.stringValues.stringValues = static_cast<const char**>(malloc(stringValues.size() * sizeof(char*)));
         for (size_t f = 0; f < stringValues.size(); f++)
         {
             const size_t size = strlen(stringValues[i]) * sizeof(char);
-            command.stringValues.stringValues[f] = static_cast<char*>(malloc(size));
-            memcpy(command.stringValues.stringValues[f], stringValues[f], size);
+            command.stringValues.stringValues[f] = static_cast<const char*>(malloc(size));
+            memcpy(UCLI_VOID_CAST(command.stringValues.stringValues[f]), stringValues[f], size);
         }
 
         command.stringValues.stringValuesCount = stringValues.size();
@@ -75,7 +74,7 @@ static void loadArrayCommand(int& i, const int argc, char** argv, T& command, co
         command.stringValues._internal_._bFreeStringValues = true;
         command.stringValues._internal_._bFreeInnerStringValues = true;
 
-        return;
+        return true;
     }
 
     if (!bForcedDefault)
@@ -92,20 +91,14 @@ static void loadArrayCommand(int& i, const int argc, char** argv, T& command, co
                 // This is for cases where `--flag -- ...` since `--` is and explicit hard stop
                 if (stringValues.empty())
                 {
-                    command.stringValues.stringValues = nullptr;
-                    command.stringValues.stringValuesCount = 0;
-
-                    // Owned by the user
-                    command.stringValues._internal_._bFreeStringValues = false;
-                    command.stringValues._internal_._bFreeInnerStringValues = false;
-
-                    return;
+                    useNullArguments(command);
+                    return true;
                 }
                 break;
             }
 
             // Stop parsing at another flag: --flag a b c d --another produces [a, b, c, d]
-            if (argv[i][0] == flagPrefix)
+            if (!command.useLiteralFlags && argv[i][0] == flagPrefix)
             {
                 // Special case: we have encountered a situation like this: `git clone --recursive https://...`
                 // where we're at `clone`.
@@ -118,11 +111,21 @@ static void loadArrayCommand(int& i, const int argc, char** argv, T& command, co
                 // recursive = true, depth = 1, depth = 2, clone="https://..."
                 if (std::is_same_v<T, UCLI::Command> && stringValues.empty())
                 {
-                    // TODO:
+                    i--;
+                    break;
+                    //returnValue = UCLI::Internal::probeFlags(i, argc, argv, p);
+//
+                    //if (returnValue == false)
+                    //{
+                    //    useDefaultArguments(command);
+                    //    return returnValue;
+                    //}
                 }
                 else
+                {
                     i--; // Bump back so that we can parse it separately outside here
-                break;
+                    break;
+                }
             }
 
             stringValues.push_back(argv[i]);
@@ -131,8 +134,8 @@ static void loadArrayCommand(int& i, const int argc, char** argv, T& command, co
         if (!stringValues.empty())
         {
             // We're not allocating and copying the inner strings, since they were already allocated by the toolchain's code
-            command.stringValues.stringValues = static_cast<char**>(malloc(stringValues.size() * sizeof(char*)));
-            memcpy(command.stringValues.stringValues, stringValues.data(), stringValues.size() * sizeof(char*));
+            command.stringValues.stringValues = static_cast<const char**>(malloc(stringValues.size() * sizeof(char*)));
+            memcpy(UCLI_VOID_CAST(command.stringValues.stringValues), stringValues.data(), stringValues.size() * sizeof(char*));
 
             command.stringValues.stringValuesCount = stringValues.size();
 
@@ -140,14 +143,8 @@ static void loadArrayCommand(int& i, const int argc, char** argv, T& command, co
             command.stringValues._internal_._bFreeStringValues = true;
             command.stringValues._internal_._bFreeInnerStringValues = false;
 
-            return;
+            return true;
         }
     }
-    // Default arguments, since: no assignment and forced to use default arguments or no further arguments found
-    command.stringValues.stringValues = command.defaultValues;
-    command.stringValues.stringValuesCount = command.defaultValuesCount;
-
-    // Owned by the user
-    command.stringValues._internal_._bFreeStringValues = false;
-    command.stringValues._internal_._bFreeInnerStringValues = false;
+    return returnValue;
 }
