@@ -178,7 +178,7 @@ void UCLI::Parser::pushHelp() noexcept
         .callback = helpCommand,
         .context = this,
 
-        .priority = 0
+        .priority = SIZE_MAX
     };
 
     pushCommand(helpCmd);

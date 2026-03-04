@@ -117,6 +117,8 @@ extern "C"
 
         bool useLiteralFlags;
 
+        // CAUTION: Values from SIZE_MAX / 2 to SIZE_MAX are placed at the front of the callback queue and are sorted
+        // at a command depth of -1, while values from 0 to SIZE_MAX / 2 are sorted at the command depth of the flag
         size_t priority;
 
         char* _internal_ctx_;

@@ -28,8 +28,8 @@ namespace UCLI
         // The default is `,`
         Parser& setArrayDelimiter(char delimiter) noexcept;
 
-        // By default, we use strict mode, where the default argument/command is called and directly exits. Lenient mode
-        // replaces calls to invalid commands/flags with the default argument/flag command instead.
+        // By default, we use strict mode where the default argument/command is called and directly exits. Lenient mode
+        // replaces calls to invalid commands/flags with the default argument/flag command instead without exiting.
         Parser& useLenientMode(bool bUseLenientMode) noexcept;
 
         // Whether to toggle boolean arguments or to set them to true. The default behaviour is to set them to true
