@@ -1,5 +1,11 @@
 #pragma once
-#include <string_view>
+#include <string>
+#include <algorithm>
+
+static void toLower(std::string& str)
+{
+    std::ranges::transform(str, str.begin(), tolower);
+}
 
 /**
  * This is a parser for arguments of type UCLI_COMMAND_TYPE_BOOL. The syntax is as follows:
@@ -20,8 +26,9 @@ static void loadBooleanCommand(int& i, const int argc, char** argv, T& command, 
 
     if (assignmentIndex >= 0)
     {
-        const std::string_view str = argv[i] + assignmentIndex + 1;
-        if (str == "false" || str == "0")
+        std::string str = argv[i] + assignmentIndex + 1;
+        toLower(str);
+        if (str == "false" || str == "0" || str == "no" || str == "n")
         {
             *command.boolValue = false;
             return;
@@ -29,10 +36,11 @@ static void loadBooleanCommand(int& i, const int argc, char** argv, T& command, 
     }
     else if (!bForcedDefault && argc > (i + 1) && argv[i + 1][0] != flagPrefix)
     {
-        const std::string_view str = argv[i + 1];
+        std::string str = argv[i + 1];
+        toLower(str);
         i++;
 
-        if (str == "false" || str == "0")
+        if (str == "false" || str == "0" || str == "no" || str == "n")
         {
             *command.boolValue = false;
             return;

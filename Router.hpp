@@ -6,7 +6,7 @@
 #include "CLIParser.hpp"
 
 template<typename T>
-static void pushCallback(T& command, const int64_t commandDepth, std::deque<UCLI::Parser::CallbackObject>& callbacks) noexcept
+static void pushCallback(const size_t insertionIndex, T& command, const int64_t commandDepth, std::deque<UCLI::Parser::CallbackObject>& callbacks) noexcept
 {
     // When inserting flags we need to sort them in a specific manner
     if constexpr (std::is_same_v<T, UCLI::Flag>)
@@ -67,14 +67,25 @@ static void pushCallback(T& command, const int64_t commandDepth, std::deque<UCLI
         }
     }
     else
-        callbacks.emplace_back(&command, true);
+    {
+        // If the insertion index is equal to the size of the callbacks queue this means that the command order is correct:
+        // command -> flags. If it isn't it's because we've pushed flags before the current command. This happens when
+        // using flag probing where the command looks like: git clone --recursive https://...
+        if (insertionIndex == callbacks.size())
+            callbacks.emplace_back(&command, true);
+        else
+            callbacks.insert(callbacks.begin() + static_cast<std::remove_cvref_t<decltype(callbacks)>::difference_type>(insertionIndex), { .ptr = &command, .bCommand = true });
+    }
 }
 
 // This function routes the actual parsing of arguments and handling of syntax features to the command's corresponding
 // parser
 template<typename T>
-static void executeCommand(int& i, const int argc, char** argv, T& command, const int64_t assignmentIndex, const char arrayDelimiter, const bool bToggle, const char flagPrefix, const bool bForcedDefault, const int64_t commandDepth, std::deque<UCLI::Parser::CallbackObject>& callbacks, UCLI::Parser& p) noexcept
+static void executeCommand(int& i, const int argc, char** argv, T& command, const int64_t assignmentIndex, const char arrayDelimiter, const bool bToggle, const char flagPrefix, const bool bForcedDefault, const bool bProbingFlags, const int64_t commandDepth, std::deque<UCLI::Parser::CallbackObject>& callbacks, UCLI::Parser& p) noexcept
 {
+    // Always insert commands at this index
+    size_t insertionIndex = callbacks.size();
+
     if (command.type == UCLI_COMMAND_TYPE_BOOL)
         loadBooleanCommand(i, argc, argv, command, assignmentIndex, bToggle, flagPrefix, bForcedDefault);
     else if (command.type == UCLI_COMMAND_TYPE_STRING)
@@ -83,8 +94,10 @@ static void executeCommand(int& i, const int argc, char** argv, T& command, cons
             return;
     }
     else if (command.type == UCLI_COMMAND_TYPE_ARRAY)
-        if (!loadArrayCommand(i, argc, argv, command, assignmentIndex, arrayDelimiter, flagPrefix, bForcedDefault, p))
+    {
+        if (!loadArrayCommand(i, argc, argv, command, assignmentIndex, arrayDelimiter, flagPrefix, bForcedDefault, bProbingFlags, p))
             return;
+    }
 
-    pushCallback(command, commandDepth, callbacks);
+    pushCallback(insertionIndex, command, commandDepth, callbacks);
 }

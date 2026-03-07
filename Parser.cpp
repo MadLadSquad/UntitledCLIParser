@@ -89,6 +89,7 @@ UCLI::Parser& UCLI::Parser::parse(const int argc, char** argv) noexcept
                             bToggleBooleans,
                             flagPrefix,
                             false,
+                            bProbingFlags,
                             0,
                             callbacks,
                             *this
@@ -105,7 +106,7 @@ UCLI::Parser& UCLI::Parser::parse(const int argc, char** argv) noexcept
                         defaultCommand->_internal_ctx_ = argv[i];
                         // Do not run executeCommand, since it contains additional parsing logic. Default commands
                         // should not take advantage of features such as default arguments and values
-                        pushCallback(*defaultCommand, 0, callbacks);
+                        pushCallback(callbacks.size(), *defaultCommand, 0, callbacks);
                     }
 
                     // In lenient mode we just add the default and continue forward

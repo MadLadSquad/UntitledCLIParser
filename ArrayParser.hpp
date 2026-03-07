@@ -19,10 +19,8 @@
  *    we find the values.
  */
 template<typename T>
-static bool loadArrayCommand(int& i, const int argc, char** argv, T& command, const int64_t assignmentIndex, const char arrayDelimiter, const char flagPrefix, const bool bForcedDefault, UCLI::Parser& p) noexcept
+static bool loadArrayCommand(int& i, const int argc, char** argv, T& command, const int64_t assignmentIndex, const char arrayDelimiter, const char flagPrefix, const bool bForcedDefault, const bool bProbingFlags, UCLI::Parser& p) noexcept
 {
-    bool returnValue = true;
-
     std::vector<char*> stringValues{};
 
     // Is a variable assignment --flag=value
@@ -91,6 +89,31 @@ static bool loadArrayCommand(int& i, const int argc, char** argv, T& command, co
         // --
         const char doubleFlagPrefix[] = { flagPrefix, flagPrefix, '\0' };
 
+        // Terminate directly if the next argument is a flag or probe for flags if the current argument is a command
+        if (!command.useLiteralFlags && argv[i + 1][0] == flagPrefix)
+        {
+            // Special case: we have encountered a situation like this: `git clone --recursive https://...`
+            // where we're at `clone`.
+            //
+            // To fix this issue, we start parsing flags forward until we find a non-flag value. If the value is
+            // associated with a flag that will consume it, it is set for the flag, otherwise it's set as the
+            // command's value
+            //
+            // For example: `git clone --recursive --depth=1 --depth 2 https://...` will be interpreted as if
+            // recursive = true, depth = 1, depth = 2, clone="https://..."
+            if constexpr (std::is_same_v<T, UCLI::Command>)
+            {
+                i++;
+
+                auto result = UCLI::Internal::probeFlags(command, i, argc, argv, p);
+                if (!result)
+                    return false;
+            }
+            else
+                goto use_defaults;
+        }
+
+
         // Non-variable assignment: --flag a b c d -- ...
         for (++i; i < argc; i++)
         {
@@ -109,32 +132,9 @@ static bool loadArrayCommand(int& i, const int argc, char** argv, T& command, co
             // Stop parsing at another flag: --flag a b c d --another produces [a, b, c, d]
             if (!command.useLiteralFlags && argv[i][0] == flagPrefix)
             {
-                // Special case: we have encountered a situation like this: `git clone --recursive https://...`
-                // where we're at `clone`.
-                //
-                // To fix this issue, we start parsing flags forward until we find a non-flag value. If the value is
-                // associated with a flag that will consume it, it is set for the flag, otherwise it's set as the
-                // command's value
-                //
-                // For example: `git clone --recursive --depth=1 --depth 2 https://...` will be interpreted as if
-                // recursive = true, depth = 1, depth = 2, clone="https://..."
-                if (std::is_same_v<T, UCLI::Command> && stringValues.empty())
-                {
-                    i--;
-                    break;
-                    //returnValue = UCLI::Internal::probeFlags(i, argc, argv, p);
-//
-                    //if (returnValue == false)
-                    //{
-                    //    useDefaultArguments(command);
-                    //    return returnValue;
-                    //}
-                }
-                else
-                {
+                if (!bProbingFlags)
                     i--; // Bump back so that we can parse it separately outside here
-                    break;
-                }
+                break;
             }
 
             stringValues.push_back(argv[i]);
@@ -154,6 +154,12 @@ static bool loadArrayCommand(int& i, const int argc, char** argv, T& command, co
 
             return true;
         }
+
+use_defaults:
+        if (command.defaultValues != nullptr && command.defaultValuesCount > 0)
+            useDefaultArguments(command);
+        else
+            useNullArguments(command);
     }
-    return returnValue;
+    return true;
 }

@@ -18,10 +18,6 @@ set(UCLI_HEADERS "Common.h" "CLIParser.hpp" "ArrayParser.hpp" "BooleanParser.hpp
 add_library(UntitledCLIParser ${UCLI_LIBRARY_TYPE} C/cucli.cpp CLIParser.cpp Parser.cpp Help.cpp FlagParser.cpp
         ${UCLI_HEADERS} ${UCLI_C_HEADERS}
 )
-add_executable(test main.cpp)
-
-target_link_libraries(test UntitledCLIParser)
-
 target_compile_definitions(UntitledCLIParser PRIVATE MLS_EXPORT_LIBRARY MLS_LIB_COMPILE)
 target_compile_definitions(UntitledCLIParser PUBLIC UIMGUI_CLI_PARSER_MODULE_ENABLED)
 list(APPEND compile_defs "UIMGUI_CLI_PARSER_MODULE_ENABLED")

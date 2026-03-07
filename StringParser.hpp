@@ -3,6 +3,17 @@
 #include "ParserUtils.hpp"
 #include <iostream>
 
+template<typename T>
+static void setStringValue(T& command, const int i, char** argv) noexcept
+{
+    command.stringValues.stringValues = const_cast<const char**>(argv + i);
+    command.stringValues.stringValuesCount = 1;
+
+    // Owned by the user
+    command.stringValues._internal_._bFreeStringValues = false;
+    command.stringValues._internal_._bFreeInnerStringValues = false;
+}
+
 /**
  * This is a parser for arguments of type UCLI_COMMAND_TYPE_STRING. The syntax is as follows:
  * - `command`, `-c`, `-cC`, `c` - uses the default arguments if set or sets the string value to null
@@ -48,32 +59,31 @@ static bool loadStringCommand(int& i, const int argc, char** argv, T& command, c
         if (argv[i + 1][0] != flagPrefix || (argv[i + 1][0] == flagPrefix && command.useLiteralFlags))
         {
             i++; // Skip to the next argument
-
-            command.stringValues.stringValues = const_cast<const char**>(argv + i);
-            command.stringValues.stringValuesCount = 1;
-
-            // Owned by the user
-            command.stringValues._internal_._bFreeStringValues = false;
-            command.stringValues._internal_._bFreeInnerStringValues = false;
-
+            setStringValue(command, i, argv);
             return true;
         }
 
-        if (argv[i + 1][0] == flagPrefix && std::is_same_v<T, UCLI::Command>)
+        // Special case: we have encountered a situation like this: `git clone --recursive https://...`
+        // where we're at `clone`.
+        //
+        // To fix this issue, we start parsing flags forward until we find a non-flag value. If the value is
+        // associated with a flag that will consume it, it is set for the flag, otherwise it's set as the
+        // command's value
+        //
+        // For example: `git clone --recursive --depth=1 --depth 2 https://...` will be interpreted as if
+        // recursive = true, depth = 1, depth = 2, clone="https://..."
+        if constexpr (std::is_same_v<T, UCLI::Command>)
         {
-            // Special case: we have encountered a situation like this: `git clone --recursive https://...`
-            // where we're at `clone`.
-            //
-            // To fix this issue, we start parsing flags forward until we find a non-flag value. If the value is
-            // associated with a flag that will consume it, it is set for the flag, otherwise it's set as the
-            // command's value
-            //
-            // For example: `git clone --recursive --depth=1 --depth 2 https://...` will be interpreted as if
-            // recursive = true, depth = 1, depth = 2, clone="https://..."
-            auto result = UCLI::Internal::probeFlags(i, argc, argv, p);
-
-
-            return result;
+            if (argv[i + 1][0] == flagPrefix)
+            {
+                i++; // Skip to the next argument
+                if (UCLI::Internal::probeFlags(command, i, argc, argv, p))
+                {
+                    setStringValue(command, i, argv);
+                    return true;
+                }
+                return false;
+            }
         }
     }
 

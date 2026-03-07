@@ -40,6 +40,7 @@ bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, const
                 bToggleBooleans,
                 flagPrefix,
                 false,
+                bProbingFlags,
                 depth,
                 callbacks,
                 *this
@@ -69,6 +70,7 @@ bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, const
                 bToggleBooleans,
                 flagPrefix,
                 bBatched,
+                bProbingFlags,
                 depth,
                 callbacks,
                 *this
@@ -82,7 +84,7 @@ bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, const
     return false;
 }
 
-// Returns 0 on success, 1 when skipping -- or - and 2 when skipping arguments because we hit the default
+// Returns 0 on success, 1 when skipping -- or - and 2 only in strict mode when an unrecognized command is found
 int UCLI::Internal::parseFlag(int& i, const int argc, char** argv, UCLI::Parser& p) noexcept
 {
     const char* current = argv[i];
@@ -111,7 +113,7 @@ int UCLI::Internal::parseFlag(int& i, const int argc, char** argv, UCLI::Parser&
                 p.defaultFlag->_internal_ctx_ = argv[i];
                 // Do not run executeCommand, since it contains additional parsing logic. Default commands should not
                 // take advantage of features such as default arguments and values
-                pushCallback(*p.defaultFlag, 0, p.callbacks);
+                pushCallback(p.callbacks.size(), *p.defaultFlag, 0, p.callbacks);
             }
             return p.bStrictMode ? 2 : 0;
         }
@@ -138,7 +140,7 @@ int UCLI::Internal::parseFlag(int& i, const int argc, char** argv, UCLI::Parser&
                     p.defaultFlag->_internal_ctx_ = argv[i];
                     // Do not run executeCommand, since it contains additional parsing logic. Default commands should not
                     // take advantage of features such as default arguments and values
-                    pushCallback(*p.defaultFlag, 0, p.callbacks);
+                    pushCallback(p.callbacks.size(), *p.defaultFlag, 0, p.callbacks);
                 }
                 return p.bStrictMode ? 2 : 0;
             }
@@ -147,33 +149,27 @@ int UCLI::Internal::parseFlag(int& i, const int argc, char** argv, UCLI::Parser&
     return 0;
 }
 
-bool UCLI::Internal::probeFlags(int& i, const int argc, char** argv, UCLI::Parser& p) noexcept
+// Add all flags before the argument to a command in syntax such as: git clone --recursive https://...
+bool UCLI::Internal::probeFlags(UCLI_Command& command, int& i, const int argc, char** argv, UCLI::Parser& p) noexcept
 {
+    p.bProbingFlags = true;
+
     for (; i < argc; i++)
     {
-        // Is a flag
-        if (argv[i][0] == p.flagPrefix)
-        {
-            auto result = parseFlag(i, argc, argv, p);
+        // Is a flag and errors when false
+        if (argv[i][0] == p.flagPrefix && parseFlag(i, argc, argv, p) == 2)
+            return false;
 
-            switch (result)
-            {
-            // Unrecognized argument. We return false so that we can skip adding the current command to the
-            case 2:
-                return false;
-
-            // When we hit -- or -. Move the iterator forward to the next argument so we can deal with anything else
-            case 1:
-                i++;
-                return true;
-            case 0:
-                break;
-            default:
-                break;
-            }
-        }
-        else
-            break;
+        // A value
+        if (argv[i][0] != p.flagPrefix)
+            return true;
     }
+
+    if (command.defaultValues != nullptr && command.defaultValuesCount > 0)
+        useDefaultArguments(command);
+    else
+        useNullArguments(command);
+
+    p.bProbingFlags = false;
     return true;
 }

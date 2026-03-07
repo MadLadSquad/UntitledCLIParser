@@ -1,6 +1,8 @@
 #pragma once
 #include <vector>
 #include <deque>
+#include <string>
+#include <cstring>
 #include "Common.h"
 #include "FlagParser.hpp"
 
@@ -61,6 +63,8 @@ namespace UCLI
 
         bool bStrictMode = true;
 
+        bool bProbingFlags = false;
+
         std::vector<Command> commands{};
         std::vector<Flag> flags{};
 
@@ -83,8 +87,7 @@ namespace UCLI
         static void freeFlags(Flag& command) noexcept;
 
         friend int UCLI::Internal::parseFlag(int& i, int argc, char** argv, Parser& p) noexcept;
-        friend bool UCLI::Internal::probeFlags(int& i, int argc, char** argv, Parser& p) noexcept;
-
+        friend bool UCLI::Internal::probeFlags(UCLI_Command& command, int& i, int argc, char** argv, Parser& p) noexcept;
     public:
         struct CallbackObject
         {

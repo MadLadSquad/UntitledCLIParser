@@ -184,7 +184,6 @@ void UCLI::Parser::pushHelp() noexcept
     pushCommand(helpCmd);
     pushFlag(helpFlag);
 
-
     if (defaultCommand == nullptr)
     {
         helpCmd.callback = [](const Command* command) -> CallbackResult
