@@ -10,7 +10,7 @@ static void printIndentation(const std::string& indentString, const size_t count
 
 static void printDefaultValues(const char** values, const size_t count, const UCLI::CommandType type) noexcept
 {
-    if (values != nullptr && count > 0)
+    if (values != nullptr && count > 0 && count != SIZE_MAX)
     {
         if (type == UCLI_COMMAND_TYPE_ARRAY)
         {
