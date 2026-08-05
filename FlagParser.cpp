@@ -28,7 +28,9 @@ bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, const
 
     for (size_t j = 0; j < count; j++)
     {
-        if (cleanName == array[j].longName)
+        // The long name may be null when the user only gave the flag a short name, so we can't hand it to
+        // std::string's comparison operator unchecked
+        if (array[j].longName != nullptr && cleanName == array[j].longName)
         {
             executeCommand(
                 i,
@@ -40,7 +42,6 @@ bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, const
                 bToggleBooleans,
                 flagPrefix,
                 false,
-                bProbingFlags,
                 depth,
                 callbacks,
                 *this
@@ -49,28 +50,34 @@ bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, const
         }
     }
 
-    if (command != nullptr && command->_internal_parent != nullptr)
+    // Walk up to the parent command, and once we run past the root of the chain search the parser's own flags, so
+    // that a flag declared on an ancestor command - or globally - still resolves from inside a subcommand
+    if (command != nullptr)
         return findFlagsRecursive(i, argc, argv, assignmentIndex, depth + 1, command->_internal_parent, cleanName);
     return false;
 }
 
 bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, const int64_t depth, const Command* command, const char shortName, const bool bBatched) noexcept
 {
-    for (size_t j = 0; j < command->flagsCount; j++)
+    // The command is null when we haven't entered one yet, and when we've walked past the root of the command chain.
+    // In both cases we search the parser's own flags
+    Flag* array = command == nullptr ? flags.data() : command->flags;
+    const size_t count = command == nullptr ? flags.size() : command->flagsCount;
+
+    for (size_t j = 0; j < count; j++)
     {
-        if (command->flags[j].shortName == shortName)
+        if (array[j].shortName == shortName)
         {
             executeCommand(
                 i,
                 argc,
                 argv,
-                command->flags[j],
+                array[j],
                 -1,
                 arrayDelimiter,
                 bToggleBooleans,
                 flagPrefix,
                 bBatched,
-                bProbingFlags,
                 depth,
                 callbacks,
                 *this
@@ -79,7 +86,8 @@ bool UCLI::Parser::findFlagsRecursive(int& i, const int argc, char** argv, const
         }
     }
 
-    if (command->_internal_parent != nullptr)
+    // Same as above: walk up the chain of parents and finally fall back to the parser's own flags
+    if (command != nullptr)
         return findFlagsRecursive(i, argc, argv, depth + 1, command->_internal_parent, shortName, bBatched);
     return false;
 }
@@ -107,13 +115,13 @@ int UCLI::Internal::parseFlag(int& i, const int argc, char** argv, UCLI::Parser&
 
         if (!p.findFlagsRecursive(i, argc, argv, assignmentIndex, 0, p.currentCommand, cleanName))
         {
-            if (p.defaultFlag != nullptr)
+            if (p.bHasDefaultFlag)
             {
                 // For diagnostic commands like --help
-                p.defaultFlag->_internal_ctx_ = argv[i];
+                p.defaultFlag._internal_ctx_ = argv[i];
                 // Do not run executeCommand, since it contains additional parsing logic. Default commands should not
                 // take advantage of features such as default arguments and values
-                pushCallback(p.callbacks.size(), *p.defaultFlag, 0, p.callbacks);
+                pushCallback(p.callbacks.size(), p.defaultFlag, 0, p.callbacks);
             }
             return p.bStrictMode ? 2 : 0;
         }
@@ -134,13 +142,13 @@ int UCLI::Internal::parseFlag(int& i, const int argc, char** argv, UCLI::Parser&
                 )
             )
             {
-                if (p.defaultFlag != nullptr)
+                if (p.bHasDefaultFlag)
                 {
                     // For diagnostic commands like --help
-                    p.defaultFlag->_internal_ctx_ = argv[i];
+                    p.defaultFlag._internal_ctx_ = argv[i];
                     // Do not run executeCommand, since it contains additional parsing logic. Default commands should not
                     // take advantage of features such as default arguments and values
-                    pushCallback(p.callbacks.size(), *p.defaultFlag, 0, p.callbacks);
+                    pushCallback(p.callbacks.size(), p.defaultFlag, 0, p.callbacks);
                 }
                 return p.bStrictMode ? 2 : 0;
             }
@@ -150,26 +158,36 @@ int UCLI::Internal::parseFlag(int& i, const int argc, char** argv, UCLI::Parser&
 }
 
 // Add all flags before the argument to a command in syntax such as: git clone --recursive https://...
-bool UCLI::Internal::probeFlags(UCLI_Command& command, int& i, const int argc, char** argv, UCLI::Parser& p) noexcept
+UCLI::Internal::ProbeResult UCLI::Internal::probeFlags(UCLI_Command& command, int& i, const int argc, char** argv, UCLI::Parser& p) noexcept
 {
-    p.bProbingFlags = true;
+    ProbeResult result = ProbeResult::Exhausted;
 
     for (; i < argc; i++)
     {
-        // Is a flag and errors when false
-        if (argv[i][0] == p.flagPrefix && parseFlag(i, argc, argv, p) == 2)
-            return false;
-
-        // A value
+        // Not a flag, so this is a value that belongs to the command. We check this before parsing a flag, since every
+        // caller of this function increments i past the last argument that a flag consumed
         if (argv[i][0] != p.flagPrefix)
-            return true;
+        {
+            result = ProbeResult::Value;
+            break;
+        }
+
+        // Is a flag and errors when false
+        if (parseFlag(i, argc, argv, p) == 2)
+        {
+            result = ProbeResult::Failure;
+            break;
+        }
     }
 
-    if (command.defaultValues != nullptr && command.defaultValuesCount > 0)
-        useDefaultArguments(command);
-    else
-        useNullArguments(command);
+    // We never found a value for the command, so it only gets whatever the user set as its default
+    if (result == ProbeResult::Exhausted)
+    {
+        if (command.defaultValues != nullptr && command.defaultValuesCount > 0)
+            useDefaultArguments(command);
+        else
+            useNullArguments(command);
+    }
 
-    p.bProbingFlags = false;
-    return true;
+    return result;
 }

@@ -150,12 +150,9 @@ UCLI::CallbackResult UCLI::Parser::helpCommand(const Command* command) noexcept
 
 void UCLI::Parser::pushHelp() noexcept
 {
-    std::string header = helpHeader;
-
-    static Command helpCmd{};
-    static Flag helpFlag{};
-
-    helpCmd = Command{
+    // These are deliberately not static: we copy them into the command/flag lists and into the default command/flag
+    // below, so nothing ever retains their address. Making them static would share them between every parser
+    Command helpCmd{
         .longName = "help",
         .shortName = 'h',
         .description = "Prints a help message",
@@ -167,7 +164,7 @@ void UCLI::Parser::pushHelp() noexcept
         .context = this,
     };
 
-    helpFlag = Flag{
+    Flag helpFlag{
         .longName = "help",
         .shortName = 'h',
         .description = "Prints a help message",
@@ -181,10 +178,17 @@ void UCLI::Parser::pushHelp() noexcept
         .priority = SIZE_MAX
     };
 
-    pushCommand(helpCmd);
-    pushFlag(helpFlag);
+    // Only ever add these to the lists once, since parse() calls us on every run and would otherwise keep appending
+    // duplicate help entries
+    if (!bHelpPushed)
+    {
+        bHelpPushed = true;
 
-    if (defaultCommand == nullptr)
+        pushCommand(helpCmd);
+        pushFlag(helpFlag);
+    }
+
+    if (!bHasDefaultCommand)
     {
         helpCmd.callback = [](const Command* command) -> CallbackResult
         {
@@ -192,9 +196,10 @@ void UCLI::Parser::pushHelp() noexcept
                 std::cout << "Unrecognised command: " << command->_internal_ctx_ << std::endl << std::endl;
             return helpCommand(command);
         };
-        defaultCommand = &helpCmd;
+        defaultCommand = helpCmd;
+        bHasDefaultCommand = true;
     }
-    if (defaultFlag == nullptr)
+    if (!bHasDefaultFlag)
     {
         helpFlag.callback = [](const Flag* command) -> CallbackResult
         {
@@ -202,7 +207,8 @@ void UCLI::Parser::pushHelp() noexcept
                 std::cout << "Unrecognised flag: " << command->_internal_ctx_ << std::endl << std::endl;
             return helpCommand(command);
         };
-        defaultFlag = &helpFlag;
+        defaultFlag = helpFlag;
+        bHasDefaultFlag = true;
     }
 }
 

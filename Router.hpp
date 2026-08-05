@@ -19,15 +19,19 @@ static void pushCallback(const size_t insertionIndex, T& command, const int64_t 
         {
             bool bPushed = false;
 
-            // Iterate call callbacks and count up until we hit commandDepth.
-            for (size_t a = 0, b = 0; a < callbacks.size(); a++)
+            // The depth is relative to the command that the flag was found on: 0 is the deepest command, 1 its
+            // parent and so on. The deepest command is the last one in the queue, so we walk the queue backwards and
+            // count commands from its end
+            for (size_t c = callbacks.size(), b = 0; c > 0; c--)
             {
+                const size_t a = c - 1;
+
                 // Skip other flags
                 if (!callbacks[a].bCommand)
                     continue;
 
                 // We're in a command, and we found the command at our required depth
-                if (b == commandDepth)
+                if (b == static_cast<size_t>(commandDepth))
                 {
                     bPushed = true;
 
@@ -81,7 +85,7 @@ static void pushCallback(const size_t insertionIndex, T& command, const int64_t 
 // This function routes the actual parsing of arguments and handling of syntax features to the command's corresponding
 // parser
 template<typename T>
-static void executeCommand(int& i, const int argc, char** argv, T& command, const int64_t assignmentIndex, const char arrayDelimiter, const bool bToggle, const char flagPrefix, const bool bForcedDefault, const bool bProbingFlags, const int64_t commandDepth, std::deque<UCLI::Parser::CallbackObject>& callbacks, UCLI::Parser& p) noexcept
+static void executeCommand(int& i, const int argc, char** argv, T& command, const int64_t assignmentIndex, const char arrayDelimiter, const bool bToggle, const char flagPrefix, const bool bForcedDefault, const int64_t commandDepth, std::deque<UCLI::Parser::CallbackObject>& callbacks, UCLI::Parser& p) noexcept
 {
     // Always insert commands at this index
     size_t insertionIndex = callbacks.size();
@@ -95,7 +99,7 @@ static void executeCommand(int& i, const int argc, char** argv, T& command, cons
     }
     else if (command.type == UCLI_COMMAND_TYPE_ARRAY)
     {
-        if (!loadArrayCommand(i, argc, argv, command, assignmentIndex, arrayDelimiter, flagPrefix, bForcedDefault, bProbingFlags, p))
+        if (!loadArrayCommand(i, argc, argv, command, assignmentIndex, arrayDelimiter, flagPrefix, bForcedDefault, p))
             return;
     }
 

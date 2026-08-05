@@ -8,6 +8,7 @@
  * - `command` - uses the default values or sets the array values to null. Only runs if there are no more arguments
  * - `command=value,value,value` - uses the assigned values
  * - `command=` - same as 1
+ * - `command=a,,b`, `command=,a`, `command=a,` - empty values are skipped, so these give [a, b], [a] and [a]
  * - `command value value value --` - interprets all following arguments as array values until `--` is found
  * - `command value value --flag` - interprets all following arguments as array values until a flag is found
  * - `-c` or `-cC` - same as 1
@@ -19,7 +20,7 @@
  *    we find the values.
  */
 template<typename T>
-static bool loadArrayCommand(int& i, const int argc, char** argv, T& command, const int64_t assignmentIndex, const char arrayDelimiter, const char flagPrefix, const bool bForcedDefault, const bool bProbingFlags, UCLI::Parser& p) noexcept
+static bool loadArrayCommand(int& i, const int argc, char** argv, T& command, const int64_t assignmentIndex, const char arrayDelimiter, const char flagPrefix, const bool bForcedDefault, UCLI::Parser& p) noexcept
 {
     std::vector<char*> stringValues{};
 
@@ -31,26 +32,26 @@ static bool loadArrayCommand(int& i, const int argc, char** argv, T& command, co
         // Loop until null terminator but in a more code-efficient way
         for (size_t j = startIndex; true; j++)
         {
-            if (argv[i][j] == arrayDelimiter || argv[i][j] == '\0')
-            {
-                const size_t size = (j - startIndex + 1) * sizeof(char);
-                if (size <= 1)
-                    break;
+            if (argv[i][j] != arrayDelimiter && argv[i][j] != '\0')
+                continue;
 
-                auto* str = static_cast<char*>(malloc(size));
-                memcpy(str, argv[i] + startIndex, size - 1);
-                str[size - 1] = '\0';
+            const size_t length = j - startIndex;
+
+            // Empty segments are skipped instead of ending the list, so that `command=a,,b` gives [a, b] and
+            // `command=,a` gives [a] rather than silently cutting the values short
+            if (length > 0)
+            {
+                auto* str = static_cast<char*>(malloc((length + 1) * sizeof(char)));
+                memcpy(str, argv[i] + startIndex, length);
+                str[length] = '\0';
 
                 stringValues.emplace_back(str);
-
-                startIndex = j + 1;
-
-                // Break on the end of the string or if the string ends in ,
-                if (argv[i][j] == '\0' || (argv[i][j + 1] == arrayDelimiter && argv[i][j + 2] == '\0'))
-                    break;
             }
-            else if (argv[i][j] == '\0')
+
+            if (argv[i][j] == '\0')
                 break;
+
+            startIndex = j + 1;
         }
 
         // Default values
@@ -60,13 +61,10 @@ static bool loadArrayCommand(int& i, const int argc, char** argv, T& command, co
             return true;
         }
 
+        // The segments above are already null-terminated copies that we own, so we hand their ownership over to the
+        // command instead of copying every one of them a second time
         command.stringValues.stringValues = static_cast<const char**>(malloc(stringValues.size() * sizeof(char*)));
-        for (size_t f = 0; f < stringValues.size(); f++)
-        {
-            const size_t size = strlen(stringValues[i]) * sizeof(char);
-            command.stringValues.stringValues[f] = static_cast<const char*>(malloc(size));
-            memcpy(UCLI_VOID_CAST(command.stringValues.stringValues[f]), stringValues[f], size);
-        }
+        memcpy(UCLI_VOID_CAST(command.stringValues.stringValues), stringValues.data(), stringValues.size() * sizeof(char*));
 
         command.stringValues.stringValuesCount = stringValues.size();
 
@@ -89,6 +87,10 @@ static bool loadArrayCommand(int& i, const int argc, char** argv, T& command, co
         // --
         const char doubleFlagPrefix[] = { flagPrefix, flagPrefix, '\0' };
 
+        // Whether probing left us on the command's first value, in which case the value sequence starts at the
+        // current argument instead of the one after it
+        bool bProbedValue = false;
+
         // Terminate directly if the next argument is a flag or probe for flags if the current argument is a command
         if (!command.useLiteralFlags && argv[i + 1][0] == flagPrefix)
         {
@@ -105,17 +107,27 @@ static bool loadArrayCommand(int& i, const int argc, char** argv, T& command, co
             {
                 i++;
 
-                auto result = UCLI::Internal::probeFlags(command, i, argc, argv, p);
-                if (!result)
+                const auto result = UCLI::Internal::probeFlags(command, i, argc, argv, p);
+                if (result == UCLI::Internal::ProbeResult::Failure)
                     return false;
+
+                // We ran out of arguments while probing, so the command has no values of its own. probeFlags has
+                // already applied its default values
+                if (result == UCLI::Internal::ProbeResult::Exhausted)
+                    return true;
+
+                // Probing stops on the command's first value, so we must not skip over it below
+                bProbedValue = true;
             }
             else
                 goto use_defaults;
         }
 
+        if (!bProbedValue)
+            i++;
 
         // Non-variable assignment: --flag a b c d -- ...
-        for (++i; i < argc; i++)
+        for (; i < argc; i++)
         {
             // This is a standard semantic for starting/terminating an array for the latest command
             if (strcmp(argv[i], doubleFlagPrefix) == 0)
@@ -132,8 +144,9 @@ static bool loadArrayCommand(int& i, const int argc, char** argv, T& command, co
             // Stop parsing at another flag: --flag a b c d --another produces [a, b, c, d]
             if (!command.useLiteralFlags && argv[i][0] == flagPrefix)
             {
-                if (!bProbingFlags)
-                    i--; // Bump back so that we can parse it separately outside here
+                // Bump back so that we can parse it separately outside here. Every caller - both the main parse loop
+                // and the probing loop - increments i afterwards, so this always leaves us on the flag
+                i--;
                 break;
             }
 
@@ -154,12 +167,14 @@ static bool loadArrayCommand(int& i, const int argc, char** argv, T& command, co
 
             return true;
         }
-
-use_defaults:
-        if (command.defaultValues != nullptr && command.defaultValuesCount > 0)
-            useDefaultArguments(command);
-        else
-            useNullArguments(command);
     }
+
+    // Batched short arguments never parse a value of their own, so they end up here too
+use_defaults:
+    if (command.defaultValues != nullptr && command.defaultValuesCount > 0)
+        useDefaultArguments(command);
+    else
+        useNullArguments(command);
+
     return true;
 }

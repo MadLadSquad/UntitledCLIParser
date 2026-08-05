@@ -188,6 +188,13 @@ extern "C"
     MLS_PUBLIC_API UCLI_CallbackResult UCLI_EMPTY_FLAG_CALLBACK(const UCLI_Flag* flag);
     MLS_PUBLIC_API UCLI_CallbackResult UCLI_EMPTY_COMMAND_CALLBACK(const UCLI_Command* flag);
 
+    /**
+     * Prints the auto-generated help message.
+     *
+     * CAUTION: These read the parser out of the `context` of the command/flag that they are called with, so the
+     * context has to point at the parser that owns it. This is what the generated help command/flag does, but it
+     * means that you cannot use these as the callback of a command/flag that carries a context of your own.
+     */
     MLS_PUBLIC_API UCLI_CallbackResult UCLI_Parser_helpCommandC(const UCLI_Command* command);
     MLS_PUBLIC_API UCLI_CallbackResult UCLI_Parser_helpCommandF(const UCLI_Flag* flag);
 #ifdef __cplusplus

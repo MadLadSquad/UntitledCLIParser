@@ -39,11 +39,14 @@ static bool loadStringCommand(int& i, const int argc, char** argv, T& command, c
             return true;
         }
 
-        command.stringValues.stringValues = static_cast<const char**>(malloc(sizeof(char**)));
-        command.stringValues.stringValues[0] = static_cast<const char*>(malloc(str.size() * sizeof(char)));
+        command.stringValues.stringValues = static_cast<const char**>(malloc(sizeof(char*)));
 
-        memcpy(UCLI_VOID_CAST(command.stringValues.stringValues[0]), str.data(), str.size() * sizeof(char));
+        // + 1 for the null terminator, since the value we get is a view into the middle of the argument
+        auto* value = static_cast<char*>(malloc((str.size() + 1) * sizeof(char)));
+        memcpy(value, str.data(), str.size() * sizeof(char));
+        value[str.size()] = '\0';
 
+        command.stringValues.stringValues[0] = value;
         command.stringValues.stringValuesCount = 1;
 
         // Owned by us
@@ -77,12 +80,17 @@ static bool loadStringCommand(int& i, const int argc, char** argv, T& command, c
             if (argv[i + 1][0] == flagPrefix)
             {
                 i++; // Skip to the next argument
-                if (UCLI::Internal::probeFlags(command, i, argc, argv, p))
-                {
-                    setStringValue(command, i, argv);
+                const auto result = UCLI::Internal::probeFlags(command, i, argc, argv, p);
+                if (result == UCLI::Internal::ProbeResult::Failure)
+                    return false;
+
+                // We ran out of arguments while probing, so the command has no value of its own. probeFlags has
+                // already applied its default value, and i is past the end of argv, so we must not read from it
+                if (result == UCLI::Internal::ProbeResult::Exhausted)
                     return true;
-                }
-                return false;
+
+                setStringValue(command, i, argv);
+                return true;
             }
         }
     }

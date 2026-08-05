@@ -63,15 +63,23 @@ namespace UCLI
 
         bool bStrictMode = true;
 
-        bool bProbingFlags = false;
-
         std::vector<Command> commands{};
         std::vector<Flag> flags{};
 
         Command* currentCommand = nullptr;
 
-        Command* defaultCommand = nullptr;
-        Flag* defaultFlag = nullptr;
+        // The default command/flag is stored by value instead of as a pointer into the vectors above, because pushing
+        // a command or flag - which pushHelp() does on every parse - reallocates them and invalidates any pointer we
+        // may have kept
+        Command defaultCommand{};
+        Flag defaultFlag{};
+
+        bool bHasDefaultCommand = false;
+        bool bHasDefaultFlag = false;
+
+        // parse() calls pushHelp() on every run, but the generated help command/flag may only be added to the lists
+        // above once
+        bool bHelpPushed = false;
 
         void pushHelp() noexcept;
 
@@ -87,7 +95,7 @@ namespace UCLI
         static void freeFlags(Flag& command) noexcept;
 
         friend int UCLI::Internal::parseFlag(int& i, int argc, char** argv, Parser& p) noexcept;
-        friend bool UCLI::Internal::probeFlags(UCLI_Command& command, int& i, int argc, char** argv, Parser& p) noexcept;
+        friend UCLI::Internal::ProbeResult UCLI::Internal::probeFlags(UCLI_Command& command, int& i, int argc, char** argv, Parser& p) noexcept;
     public:
         struct CallbackObject
         {
@@ -95,6 +103,11 @@ namespace UCLI
             bool bCommand = false;
         };
 
+        // Prints the auto-generated help message.
+        //
+        // CAUTION: These read the parser out of the `context` of the command/flag that they are called with, so the
+        // context has to point at the parser that owns it. This is what the generated help command/flag does, but it
+        // means that you cannot use these as the callback of a command/flag that carries a context of your own
         static CallbackResult helpCommand(const Flag* command) noexcept;
         static CallbackResult helpCommand(const Command* command) noexcept;
     private:

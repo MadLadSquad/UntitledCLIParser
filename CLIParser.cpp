@@ -40,14 +40,16 @@ UCLI::Parser& UCLI::Parser::pushFlag(const Flag& flag) noexcept
 UCLI::Parser& UCLI::Parser::pushDefaultCommand(const Command& command) noexcept
 {
     commands.push_back(command);
-    defaultCommand = &commands.back();
+    defaultCommand = command;
+    bHasDefaultCommand = true;
     return *this;
 }
 
 UCLI::Parser& UCLI::Parser::pushDefaultFlag(const Flag& flag) noexcept
 {
     flags.push_back(flag);
-    defaultFlag = &flags.back();
+    defaultFlag = flag;
+    bHasDefaultFlag = true;
     return *this;
 }
 
@@ -95,9 +97,9 @@ UCLI::Parser& UCLI::Parser::release() noexcept
     for (auto& flag : flags)
         freeFlags(flag);
 
-    defaultCommand = nullptr;
-    defaultFlag = nullptr;
-
+    // The default command/flag never goes through executeCommand, so it never owns any parsed values of its own and
+    // there is nothing to free here. We also keep them registered: this function frees parsed values, it doesn't
+    // unregister anything, which is why the command and flag lists above survive it too
     return *this;
 }
 

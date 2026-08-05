@@ -36,3 +36,6 @@ cmake-build-*/
 .idea/
 .vs/
 build/
+graphify-out/
+.agents/
+.claude/

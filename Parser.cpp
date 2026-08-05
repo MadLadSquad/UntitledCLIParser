@@ -17,18 +17,26 @@
  */
 UCLI::Parser& UCLI::Parser::parse(const int argc, char** argv) noexcept
 {
+    // Reset the state that is only meaningful within a single run, so that a parser can be used more than once
+    currentCommand = nullptr;
+    defaultCommand._internal_ctx_ = nullptr;
+    defaultFlag._internal_ctx_ = nullptr;
+
     if (bUseHelp)
         pushHelp();
 
     if (argc <= 1)
     {
-        if (defaultCommand == nullptr)
+        if (!bHasDefaultCommand)
             goto finish_parse;
-        defaultCommand->callback(defaultCommand);
+        defaultCommand.callback(&defaultCommand);
     }
     else
     {
         bool bHitDefault = false;
+        // Whether the argument that triggered the default was a flag or a command, so that we know which of the two
+        // defaults to run in strict mode
+        bool bDefaultIsFlag = false;
 
         for (int i = 1; i < argc; i++)
         {
@@ -42,6 +50,7 @@ UCLI::Parser& UCLI::Parser::parse(const int argc, char** argv) noexcept
                 if (Internal::parseFlag(i, argc, argv, *this) == 2)
                 {
                     bHitDefault = true;
+                    bDefaultIsFlag = true;
                     break;
                 }
             }
@@ -72,7 +81,10 @@ UCLI::Parser& UCLI::Parser::parse(const int argc, char** argv) noexcept
                 bool bFound = false;
                 for (size_t f = 0; f < currentCommandsSize; f++)
                 {
-                    if (cleanName == currentCommandsArray[f].longName || (cleanName.length() == 1 && cleanName[0] == currentCommandsArray[f].shortName))
+                    // The long name may be null when the user only gave the command a short name, so we can't hand it
+                    // to std::string's comparison operator unchecked
+                    const char* longName = currentCommandsArray[f].longName;
+                    if ((longName != nullptr && cleanName == longName) || (cleanName.length() == 1 && cleanName[0] == currentCommandsArray[f].shortName))
                     {
                         bFound = true;
 
@@ -89,7 +101,6 @@ UCLI::Parser& UCLI::Parser::parse(const int argc, char** argv) noexcept
                             bToggleBooleans,
                             flagPrefix,
                             false,
-                            bProbingFlags,
                             0,
                             callbacks,
                             *this
@@ -100,13 +111,13 @@ UCLI::Parser& UCLI::Parser::parse(const int argc, char** argv) noexcept
 
                 if (!bFound)
                 {
-                    if (defaultCommand != nullptr)
+                    if (bHasDefaultCommand)
                     {
                         // This is for diagnostic commands like --help
-                        defaultCommand->_internal_ctx_ = argv[i];
+                        defaultCommand._internal_ctx_ = argv[i];
                         // Do not run executeCommand, since it contains additional parsing logic. Default commands
                         // should not take advantage of features such as default arguments and values
-                        pushCallback(callbacks.size(), *defaultCommand, 0, callbacks);
+                        pushCallback(callbacks.size(), defaultCommand, 0, callbacks);
                     }
 
                     // In lenient mode we just add the default and continue forward
@@ -122,18 +133,17 @@ UCLI::Parser& UCLI::Parser::parse(const int argc, char** argv) noexcept
         // In lenient mode we simply run everything
         if (bHitDefault && bStrictMode)
         {
-            // In strict mode we only run the default command
-            const auto& last = callbacks.back();
-            if (last.bCommand && defaultCommand != nullptr)
+            // In strict mode we only run the default for the argument that we failed to recognise. We run it directly
+            // instead of taking it from the back of the callback queue, since the queue may be empty when no default
+            // is registered, and since high-priority flags - such as the generated help flag - are pushed to the
+            // front of the queue rather than its back
+            if (bDefaultIsFlag)
             {
-                const auto* ptr = static_cast<Command*>(last.ptr);
-                ptr->callback(ptr);
+                if (bHasDefaultFlag)
+                    defaultFlag.callback(&defaultFlag);
             }
-            else if (defaultFlag != nullptr)
-            {
-                const auto* ptr = static_cast<Flag*>(last.ptr);
-                ptr->callback(ptr);
-            }
+            else if (bHasDefaultCommand)
+                defaultCommand.callback(&defaultCommand);
         }
         else
         {
